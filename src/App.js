@@ -478,7 +478,6 @@ function CareForm({ coordinatorRecord, properties }) {
         "Visitors Policy Discussed": form.visitorsPolicy,
         "Program Fee Paid": form.programFeePaid,
         "Non Compliance Notes": form.nonComplianceNotes,
-        "Non Compliance": form.nonCompliance,
         "Employer Name": form.employerName,
         "Pay Rate": form.payRate,
         "Checking Balance": form.checkingBalance,
@@ -565,16 +564,18 @@ function CareForm({ coordinatorRecord, properties }) {
       <Card title="House Maintenance" icon="🏠">
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks <span style={{ color: C.danger }}>*</span></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {[["kitchenClean", "Kitchen"], ["bathroomsClean", "Bathrooms"], ["floorsClean", "Floors"]].map(([k, l]) => (
-              <div key={k}>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4, fontWeight: 600 }}>{l}</div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  <button onClick={() => set(k, true)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `2px solid ${form[k] === true ? C.green : C.border}`, background: form[k] === true ? C.green : C.white, color: form[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Y</button>
-                  <button onClick={() => set(k, false)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `2px solid ${form[k] === false ? C.danger : C.border}`, background: form[k] === false ? C.danger : C.white, color: form[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>N</button>
+          <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "12px", background: C.light }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              {[["kitchenClean", "Kitchen"], ["bathroomsClean", "Bathrooms"], ["floorsClean", "Floors"]].map(([k, l]) => (
+                <div key={k}>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600, textAlign: "center" }}>{l}</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => set(k, true)} style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: `2px solid ${form[k] === true ? C.green : C.border}`, background: form[k] === true ? C.green : C.white, color: form[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Y</button>
+                    <button onClick={() => set(k, false)} style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: `2px solid ${form[k] === false ? C.danger : C.border}`, background: form[k] === false ? C.danger : C.white, color: form[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>N</button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
         <YesNo label="Laundry?" value={form.laundry} onChange={v => set("laundry", v)} required />
