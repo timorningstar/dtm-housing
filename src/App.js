@@ -197,7 +197,7 @@ function LoginPage() {
   );
 }
 
-function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allProperties }) {
+function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allProperties, allResidents }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -219,6 +219,7 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
 
   const propName = id => allProperties.find(p => p.id === id)?.fields?.Name || "—";
   const coordName = id => allCoordinators.find(c => c.id === id)?.fields?.Name || "—";
+  const residentName = id => allResidents.find(r => r.id === id)?.fields?.Name || "—";
 
   const filtered = reports.filter(r => {
     if (!isAdmin) {
@@ -269,13 +270,15 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
         const coord = allCoordinators.find(c => coordIds.includes(c.id));
         const propIds = coord?.fields?.Properties || [];
         const pName = propIds.length ? propName(propIds[0]) : "—";
+        const residentIds = r.fields.Resident || [];
+        const rName = residentIds.length ? residentName(residentIds[0]) : "—";
         const f = r.fields;
         return (
           <div key={r.id} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(26,58,92,0.07)" }}>
             <div onClick={() => setExpanded(isOpen ? null : r.id)}
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: isOpen ? "#e8f0f8" : C.white }}>
               <div>
-                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"}</div>
+                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"} &nbsp;·&nbsp; {rName}</div>
                 <div style={{ fontSize: 13, color: C.muted }}>{pName}{isAdmin ? ` · ${cName}` : ""}</div>
               </div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 18 }}>{isOpen ? "▲" : "▼"}</div>
@@ -996,7 +999,7 @@ export default function App() {
         )
       )}
       {tab === "history" && (
-        <HistoryPage coordinatorRecord={coordinatorRecord} isAdmin={isAdmin} allCoordinators={coordinators} allProperties={properties} />
+        <HistoryPage coordinatorRecord={coordinatorRecord} isAdmin={isAdmin} allCoordinators={coordinators} allProperties={properties} allResidents={residents} />
       )}
       {tab === "admin" && isAdmin && (
         <AdminPage onBack={() => setTab("form")} allCoordinators={coordinators} allProperties={properties} allResidents={residents} allAdmins={admins} reload={loadData} />
