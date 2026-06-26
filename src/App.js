@@ -279,7 +279,7 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: isOpen ? "#e8f0f8" : C.white }}>
               <div>
                 <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"} &nbsp;·&nbsp; {rName}</div>
-                <div style={{ fontSize: 13, color: C.muted }}>{pName}{isAdmin ? ` · ${cName}` : ""}</div>
+                <div style={{ fontSize: 13, color: C.muted }}>{pName} · {cName}{isAdmin ? "" : ""}</div>
               </div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 18 }}>{isOpen ? "▲" : "▼"}</div>
             </div>
