@@ -379,7 +379,7 @@ const emptyForm = {
   date: "", residentId: "",
   // Spiritual Growth
   churchAttendance: null, churchName: "", bibleReadingPlan: null,
-  prayerRequests: null, prayerRequestNotes: "", spiritualGrowthNotes: "",
+  prayerRequests: null, prayerRequestNotes: "", spiritualGrowthOther: null, spiritualGrowthNotes: "",
   // Weekly Participation
   workSchedule: null, workConcernsNotes: "", attendingTherapy: null,
   attendingClasses: null, currentClassMentor: "", attendingRecoveryMeeting: null,
@@ -388,7 +388,7 @@ const emptyForm = {
   laundry: null, trashRemoved: null, repairsNeeded: null, repairNotes: "",
   mealPrepConcerns: null, mealPrepNotes: "",
   // Agreement Compliance
-  alcoholDrugsNicotine: null, visitorsPolicy: null, programFeePaid: null, nonComplianceNotes: "",
+  alcoholDrugsNicotine: null, visitorsPolicy: null, programFeePaid: null, nonCompliance: null, nonComplianceNotes: "",
   // Financial Goals
   employerName: "", payRate: "", checkingBalance: "", savingsBalance: "",
   incomeGoalsReviewed: null, financialSetbacks: null, financialSetbackNotes: "",
@@ -431,10 +431,10 @@ function CareForm({ coordinatorRecord, properties }) {
   const hasChildren = selectedResident?.fields?.["Has Children"] || false;
 
   const requiredFields = [
-    "churchAttendance", "bibleReadingPlan", "prayerRequests",
+    "churchAttendance", "bibleReadingPlan", "prayerRequests", "spiritualGrowthOther",
     "workSchedule", "attendingTherapy", "attendingClasses", "attendingRecoveryMeeting",
     "kitchenClean", "bathroomsClean", "floorsClean", "laundry", "trashRemoved", "repairsNeeded", "mealPrepConcerns",
-    "alcoholDrugsNicotine", "visitorsPolicy", "programFeePaid",
+    "alcoholDrugsNicotine", "visitorsPolicy", "programFeePaid", "nonCompliance",
     "incomeGoalsReviewed", "financialSetbacks",
     "oilChangeNeeded", "carInsuranceCurrent", "vehicleConcerns",
     "otherConcerns",
@@ -478,6 +478,7 @@ function CareForm({ coordinatorRecord, properties }) {
         "Visitors Policy Discussed": form.visitorsPolicy,
         "Program Fee Paid": form.programFeePaid,
         "Non Compliance Notes": form.nonComplianceNotes,
+        "Non Compliance": form.nonCompliance,
         "Employer Name": form.employerName,
         "Pay Rate": form.payRate,
         "Checking Balance": form.checkingBalance,
@@ -545,7 +546,7 @@ function CareForm({ coordinatorRecord, properties }) {
         <YesNo label="Prayer requests?" value={form.prayerRequests} onChange={v => set("prayerRequests", v)} required>
           <Textarea label="Prayer request details" value={form.prayerRequestNotes} onChange={v => set("prayerRequestNotes", v)} placeholder="List prayer requests…" />
         </YesNo>
-        <YesNo label="Other needs to encourage spiritual growth?" value={form.spiritualGrowthNotes !== ""} onChange={v => { if (!v) set("spiritualGrowthNotes", ""); }} required>
+        <YesNo label="Other needs to encourage spiritual growth?" value={form.spiritualGrowthOther} onChange={v => set("spiritualGrowthOther", v)} required>
           <Textarea label="Notes" value={form.spiritualGrowthNotes} onChange={v => set("spiritualGrowthNotes", v)} placeholder="Describe other spiritual needs…" />
         </YesNo>
       </Card>
@@ -590,7 +591,7 @@ function CareForm({ coordinatorRecord, properties }) {
         <YesNo label="Alcohol, drug and nicotine compliance?" value={form.alcoholDrugsNicotine} onChange={v => set("alcoholDrugsNicotine", v)} required />
         <YesNo label="Discussed visitors policy?" value={form.visitorsPolicy} onChange={v => set("visitorsPolicy", v)} required />
         <YesNo label="Program fee of $300 paid by 1st of month?" value={form.programFeePaid} onChange={v => set("programFeePaid", v)} required />
-        <YesNo label="Any non-compliance issues?" value={form.nonComplianceNotes !== ""} onChange={v => { if (!v) set("nonComplianceNotes", ""); }} required>
+        <YesNo label="Any non-compliance issues?" value={form.nonCompliance} onChange={v => set("nonCompliance", v)} required>
           <Textarea label="Non-compliance notes" value={form.nonComplianceNotes} onChange={v => set("nonComplianceNotes", v)} placeholder="Describe non-compliance…" />
         </YesNo>
       </Card>
