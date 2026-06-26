@@ -67,15 +67,36 @@ const SelectField = ({ label, value, onChange, options, placeholder, required })
   </div>
 );
 
-const CheckItem = ({ label, checked, onChange, children }) => (
+const CheckItem = ({ label, checked, onChange, children, required }) => (
   <div style={{ marginBottom: 10 }}>
     <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
       <div onClick={onChange} style={{ width: 22, height: 22, minWidth: 22, border: `2px solid ${checked ? C.gold : C.border}`, borderRadius: 4, background: checked ? C.gold : C.white, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1, cursor: "pointer" }}>
         {checked && <svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1.5 5L5 8.5L11.5 1.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </div>
-      <span style={{ fontSize: 15, color: C.text, lineHeight: 1.4 }}>{label}</span>
+      <span style={{ fontSize: 15, color: C.text, lineHeight: 1.4 }}>{label}{required && <span style={{ color: C.danger }}> *</span>}</span>
     </label>
     {children && checked && <div style={{ marginLeft: 32, marginTop: 6 }}>{children}</div>}
+  </div>
+);
+
+const YesNo = ({ label, value, onChange, children, required }) => (
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ fontSize: 14, color: C.text, marginBottom: 6, fontWeight: 500 }}>
+      {label}{required && <span style={{ color: C.danger }}> *</span>}
+    </div>
+    <div style={{ display: "flex", gap: 10 }}>
+      <button onClick={() => onChange(true)} style={{
+        flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === true ? C.green : C.border}`,
+        background: value === true ? C.green : C.white, color: value === true ? C.white : C.muted,
+        fontWeight: 700, fontSize: 14, cursor: "pointer",
+      }}>Yes</button>
+      <button onClick={() => onChange(false)} style={{
+        flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === false ? C.danger : C.border}`,
+        background: value === false ? C.danger : C.white, color: value === false ? C.white : C.muted,
+        fontWeight: 700, fontSize: 14, cursor: "pointer",
+      }}>No</button>
+    </div>
+    {value === true && children && <div style={{ marginTop: 8 }}>{children}</div>}
   </div>
 );
 
@@ -217,7 +238,8 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
     return true;
   });
 
-  const checkIcon = val => val ? "✅" : "⬜";
+  const yn = val => val === true ? "✅ Yes" : val === false ? "❌ No" : "—";
+  const txt = val => val || "—";
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "18px 14px 40px" }}>
@@ -247,68 +269,101 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
         const coord = allCoordinators.find(c => coordIds.includes(c.id));
         const propIds = coord?.fields?.Properties || [];
         const pName = propIds.length ? propName(propIds[0]) : "—";
+        const f = r.fields;
         return (
           <div key={r.id} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(26,58,92,0.07)" }}>
             <div onClick={() => setExpanded(isOpen ? null : r.id)}
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: isOpen ? "#e8f0f8" : C.white }}>
               <div>
-                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{r.fields.Date || "No date"}</div>
+                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"}</div>
                 <div style={{ fontSize: 13, color: C.muted }}>{pName}{isAdmin ? ` · ${cName}` : ""}</div>
               </div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 18 }}>{isOpen ? "▲" : "▼"}</div>
             </div>
             {isOpen && (
-              <div style={{ padding: "16px 18px", borderTop: `1px solid ${C.border}` }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 14 }}>
-                  <div><strong>House Maintenance</strong></div><div></div>
-                  <div>{checkIcon(r.fields.Cleanliness)} Cleanliness</div>
-                  <div>{checkIcon(r.fields.Laundry)} Laundry</div>
-                  <div>{checkIcon(r.fields["Trash Removed"])} Trash Removed</div>
-                  <div>{checkIcon(r.fields["Repairs Needed"])} Repairs Needed</div>
+              <div style={{ padding: "16px 18px", borderTop: `1px solid ${C.border}`, fontSize: 14 }}>
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8 }}>✝️ Spiritual Growth</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  <div>Church Attendance: {yn(f["Church Attendance"])}</div>
+                  {f["Church Name"] && <div>Church: {f["Church Name"]}</div>}
+                  <div>Bible Reading Plan: {yn(f["Bible Reading Plan"])}</div>
+                  <div>Prayer Requests: {yn(f["Prayer Requests"])}</div>
                 </div>
-                {r.fields["Improvement Needed"] && <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>Improvement: {r.fields["Improvement Needed"]}</div>}
-                <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 14 }}>
-                  <div><strong>Agreement Compliance</strong></div><div></div>
-                  <div>{checkIcon(r.fields["No Smoking/Drugs"])} No Smoking/Drugs</div>
-                  <div>{checkIcon(r.fields["Visitor Security"])} Visitor/Security</div>
-                  <div>{checkIcon(r.fields["Rent Payment Concerns"])} Rent Payment</div>
-                  <div>{checkIcon(r.fields["Lock Doors Reminder"])} Lock Doors</div>
+                {f["Prayer Request Notes"] && <div style={{ color: C.muted, marginBottom: 4 }}>Prayer: {f["Prayer Request Notes"]}</div>}
+                {f["Spiritual Growth Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Notes: {f["Spiritual Growth Notes"]}</div>}
+
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🤝 Weekly Participation</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  <div>Work Schedule: {yn(f["Work Schedule"])}</div>
+                  <div>Attending Therapy: {yn(f["Therapy Sessions"])}</div>
+                  <div>Attending Classes: {yn(f["Attending Classes"])}</div>
+                  <div>Recovery Meeting: {yn(f["Attending Recovery Meeting"])}</div>
                 </div>
-                <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 14 }}>
-                  <div><strong>Participation</strong></div><div></div>
-                  <div>{checkIcon(r.fields["Work Schedule"])} Work Schedule</div>
-                  <div>{checkIcon(r.fields["Therapy Sessions"])} Therapy Sessions</div>
-                  <div>{checkIcon(r.fields["Faith Finances Class"])} Faith & Finances</div>
-                  <div>{checkIcon(r.fields["Parenting Class"])} Parenting Class</div>
+                {f["Current Class and Mentor"] && <div style={{ color: C.muted, marginBottom: 4 }}>Class/Mentor: {f["Current Class and Mentor"]}</div>}
+                {f["Work Concerns Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Work notes: {f["Work Concerns Notes"]}</div>}
+
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🏠 House Maintenance</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  <div>Kitchen: {yn(f["Kitchen Clean"])}</div>
+                  <div>Bathrooms: {yn(f["Bathrooms Clean"])}</div>
+                  <div>Floors: {yn(f["Floors Clean"])}</div>
+                  <div>Laundry: {yn(f["Laundry"])}</div>
+                  <div>Trash: {yn(f["Trash Removed"])}</div>
+                  <div>Repairs: {yn(f["Repairs Needed"])}</div>
+                  <div>Meal Prep: {yn(f["Meal Prep Concerns"])}</div>
                 </div>
-                {r.fields["Therapy Notes"] && <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>Therapy notes: {r.fields["Therapy Notes"]}</div>}
-                <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 14 }}>
-                  <div><strong>Spiritual Growth</strong></div><div></div>
-                  <div>{checkIcon(r.fields["Church Attendance"])} Church Attendance</div>
-                  <div>{checkIcon(r.fields["Tithe"])} Tithe</div>
+                {f["Repair Notes"] && <div style={{ color: C.muted, marginBottom: 4 }}>Repair notes: {f["Repair Notes"]}</div>}
+                {f["Meal Prep Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Meal prep: {f["Meal Prep Notes"]}</div>}
+
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>📄 Agreement Compliance</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  <div>Alcohol/Drugs/Nicotine: {yn(f["Alcohol Drugs Nicotine"])}</div>
+                  <div>Visitors Policy: {yn(f["Visitors Policy Discussed"])}</div>
+                  <div>Program Fee Paid: {yn(f["Program Fee Paid"])}</div>
                 </div>
-                {r.fields["Hearing From God"] && <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>Hearing from God: {r.fields["Hearing From God"]}</div>}
-                <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 14 }}>
-                  <div><strong>Financial Goals</strong></div><div></div>
-                  <div>{checkIcon(r.fields["Checking Savings Review"])} Checking/Savings</div>
-                  <div>{checkIcon(r.fields["Paying Down Debt"])} Paying Debt</div>
-                  <div>{checkIcon(r.fields["Saving For Transition"])} Saving for Transition</div>
+                {f["Non Compliance Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Non-compliance: {f["Non Compliance Notes"]}</div>}
+
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>💰 Financial Goals</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  {f["Employer Name"] && <div>Employer: {f["Employer Name"]}</div>}
+                  {f["Pay Rate"] && <div>Pay Rate: {f["Pay Rate"]}</div>}
+                  {f["Checking Balance"] && <div>Checking: {f["Checking Balance"]}</div>}
+                  {f["Savings Balance"] && <div>Savings: {f["Savings Balance"]}</div>}
+                  <div>Income Goals Reviewed: {yn(f["Income Goals Reviewed"])}</div>
+                  <div>Setbacks: {yn(f["Financial Setbacks"])}</div>
                 </div>
-                {r.fields["Prayer Concerns"] && (
-                  <div style={{ marginTop: 12, background: "#f0f4f8", borderRadius: 7, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>PRAYER CONCERNS</div>
-                    <div style={{ fontSize: 14, color: C.text }}>{r.fields["Prayer Concerns"]}</div>
-                  </div>
+                {f["Financial Setback Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Setback notes: {f["Financial Setback Notes"]}</div>}
+
+                {(f["School Attendance"] !== undefined || f["Behavioral Support Needs"] !== undefined) && (
+                  <>
+                    <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>👶 Single Parenting</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                      <div>School Attendance: {yn(f["School Attendance"])}</div>
+                      <div>Behavioral Support: {yn(f["Behavioral Support Needs"])}</div>
+                      <div>Childcare Concerns: {yn(f["Childcare Concerns"])}</div>
+                    </div>
+                    {f["Childcare Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Childcare: {f["Childcare Notes"]}</div>}
+                  </>
                 )}
-                {r.fields["Team Help Needed"] && (
+
+                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🚗 Transportation</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
+                  <div>Oil Change Needed: {yn(f["Oil Change Needed"])}</div>
+                  <div>Car Insurance Current: {yn(f["Car Insurance Current"])}</div>
+                  <div>Vehicle Concerns: {yn(f["Vehicle Concerns"])}</div>
+                </div>
+                {f["Vehicle Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Vehicle: {f["Vehicle Notes"]}</div>}
+
+                {f["Other Concerns"] && (
                   <div style={{ marginTop: 8, background: "#fff8ec", borderRadius: 7, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>TEAM HELP NEEDED</div>
-                    <div style={{ fontSize: 14, color: C.text }}>{r.fields["Team Help Needed"]}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>OTHER CONCERNS</div>
+                    <div>{f["Other Concerns Notes"] || "—"}</div>
                   </div>
                 )}
-                {(r.fields["Drug Test Results"] || r.fields["Breathalyzer Results"]) && (
+
+                {(f["Drug Test Results"] || f["Breathalyzer Results"]) && (
                   <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>
-                    Drug Test: {r.fields["Drug Test Results"] || "—"} | Breathalyzer: {r.fields["Breathalyzer Results"] || "—"}
+                    Drug Test: {f["Drug Test Results"] || "—"} | Breathalyzer: {f["Breathalyzer Results"] || "—"}
                   </div>
                 )}
               </div>
@@ -319,17 +374,32 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
     </div>
   );
 }
+
 const emptyForm = {
   date: "", residentId: "",
-  cleanliness: false, kitchen: "", bathrooms: "", floors: "",
-  laundry: false, trash: false, repairs: false, improvementNeeded: "",
-  noSmokingDrugs: false, visitorSecurity: false, rentPayment: false, lockDoors: false,
-  workSchedule: false, therapySessions: false, therapyNotes: "",
-  faithFinances: false, parentingClass: false,
-  churchAttendance: false, tithe: false, hearingFromGod: "",
-  checkingSavings: false, payingDebt: false, savingForTransition: false, transitionGoalDate: "",
-  teamHelp: "", nextQuarterlyMeeting: "", prayerConcerns: "",
-  drugTestResults: "", drugReportedToProbation: "", breathalyzerResults: "", breathalyzerReportedToProbation: "",
+  // Spiritual Growth
+  churchAttendance: null, churchName: "", bibleReadingPlan: null,
+  prayerRequests: null, prayerRequestNotes: "", spiritualGrowthNotes: "",
+  // Weekly Participation
+  workSchedule: null, workConcernsNotes: "", attendingTherapy: null,
+  attendingClasses: null, currentClassMentor: "", attendingRecoveryMeeting: null,
+  // House Maintenance
+  kitchenClean: null, bathroomsClean: null, floorsClean: null,
+  laundry: null, trashRemoved: null, repairsNeeded: null, repairNotes: "",
+  mealPrepConcerns: null, mealPrepNotes: "",
+  // Agreement Compliance
+  alcoholDrugsNicotine: null, visitorsPolicy: null, programFeePaid: null, nonComplianceNotes: "",
+  // Financial Goals
+  employerName: "", payRate: "", checkingBalance: "", savingsBalance: "",
+  incomeGoalsReviewed: null, financialSetbacks: null, financialSetbackNotes: "",
+  // Single Parenting
+  schoolAttendance: null, behavioralSupport: null, childcareConcerns: null, childcareNotes: "",
+  // Transportation
+  oilChangeNeeded: null, carInsuranceCurrent: null, vehicleConcerns: null, vehicleNotes: "",
+  // Other
+  otherConcerns: null, otherConcernsNotes: "",
+  // Monthly
+  drugTestResults: "", breathalyzerResults: "",
 };
 
 function CareForm({ coordinatorRecord, properties }) {
@@ -357,29 +427,79 @@ function CareForm({ coordinatorRecord, properties }) {
   }, []);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const toggle = k => setForm(p => ({ ...p, [k]: !p[k] }));
   const selectedResident = residents.find(r => r.id === form.residentId);
+  const hasChildren = selectedResident?.fields?.["Has Children"] || false;
+
+  const requiredFields = [
+    "churchAttendance", "bibleReadingPlan", "prayerRequests",
+    "workSchedule", "attendingTherapy", "attendingClasses", "attendingRecoveryMeeting",
+    "kitchenClean", "bathroomsClean", "floorsClean", "laundry", "trashRemoved", "repairsNeeded", "mealPrepConcerns",
+    "alcoholDrugsNicotine", "visitorsPolicy", "programFeePaid",
+    "incomeGoalsReviewed", "financialSetbacks",
+    "oilChangeNeeded", "carInsuranceCurrent", "vehicleConcerns",
+    "otherConcerns",
+  ];
 
   const handleSubmit = async () => {
     if (!form.date || !form.residentId) { setError("Please fill in Date and Resident before submitting."); return; }
+    const missing = requiredFields.filter(f => form[f] === null);
+    if (hasChildren) {
+      ["schoolAttendance", "behavioralSupport", "childcareConcerns"].forEach(f => { if (form[f] === null) missing.push(f); });
+    }
+    if (missing.length > 0) { setError("Please answer all Yes/No questions before submitting."); return; }
     setError(""); setSubmitting(true);
     try {
       const fields = {
-        "Date": form.date, "Coordinator": [coordinatorRecord.id], "Resident": [form.residentId],
-        "Cleanliness": form.cleanliness, "Kitchen Notes": form.kitchen, "Bathroom Notes": form.bathrooms, "Floor Notes": form.floors,
-        "Laundry": form.laundry, "Trash Removed": form.trash, "Repairs Needed": form.repairs, "Improvement Needed": form.improvementNeeded,
-        "No Smoking/Drugs": form.noSmokingDrugs, "Visitor Security": form.visitorSecurity,
-        "Rent Payment Concerns": form.rentPayment, "Lock Doors Reminder": form.lockDoors,
-        "Work Schedule": form.workSchedule, "Therapy Sessions": form.therapySessions, "Therapy Notes": form.therapyNotes,
-        "Faith Finances Class": form.faithFinances, "Parenting Class": form.parentingClass,
-        "Church Attendance": form.churchAttendance, "Tithe": form.tithe, "Hearing From God": form.hearingFromGod,
-        "Checking Savings Review": form.checkingSavings, "Paying Down Debt": form.payingDebt,
-        "Saving For Transition": form.savingForTransition, "Transition Goal Date": form.transitionGoalDate || null,
-        "Team Help Needed": form.teamHelp, "Next Quarterly Meeting": form.nextQuarterlyMeeting || null,
-        "Prayer Concerns": form.prayerConcerns, "Drug Test Results": form.drugTestResults,
-        "Drug Reported Probation": form.drugReportedToProbation, "Breathalyzer Results": form.breathalyzerResults,
-        "Breathalyzer Reported Probation": form.breathalyzerReportedToProbation,
+        "Date": form.date,
+        "Coordinator": [coordinatorRecord.id],
+        "Resident": [form.residentId],
+        "Church Attendance": form.churchAttendance,
+        "Church Name": form.churchName,
+        "Bible Reading Plan": form.bibleReadingPlan,
+        "Prayer Requests": form.prayerRequests,
+        "Prayer Request Notes": form.prayerRequestNotes,
+        "Spiritual Growth Notes": form.spiritualGrowthNotes,
+        "Work Schedule": form.workSchedule,
+        "Work Concerns Notes": form.workConcernsNotes,
+        "Therapy Sessions": form.attendingTherapy,
+        "Attending Classes": form.attendingClasses,
+        "Current Class and Mentor": form.currentClassMentor,
+        "Attending Recovery Meeting": form.attendingRecoveryMeeting,
+        "Kitchen Clean": form.kitchenClean,
+        "Bathrooms Clean": form.bathroomsClean,
+        "Floors Clean": form.floorsClean,
+        "Laundry": form.laundry,
+        "Trash Removed": form.trashRemoved,
+        "Repairs Needed": form.repairsNeeded,
+        "Repair Notes": form.repairNotes,
+        "Meal Prep Concerns": form.mealPrepConcerns,
+        "Meal Prep Notes": form.mealPrepNotes,
+        "Alcohol Drugs Nicotine": form.alcoholDrugsNicotine,
+        "Visitors Policy Discussed": form.visitorsPolicy,
+        "Program Fee Paid": form.programFeePaid,
+        "Non Compliance Notes": form.nonComplianceNotes,
+        "Employer Name": form.employerName,
+        "Pay Rate": form.payRate,
+        "Checking Balance": form.checkingBalance,
+        "Savings Balance": form.savingsBalance,
+        "Income Goals Reviewed": form.incomeGoalsReviewed,
+        "Financial Setbacks": form.financialSetbacks,
+        "Financial Setback Notes": form.financialSetbackNotes,
+        "Oil Change Needed": form.oilChangeNeeded,
+        "Car Insurance Current": form.carInsuranceCurrent,
+        "Vehicle Concerns": form.vehicleConcerns,
+        "Vehicle Notes": form.vehicleNotes,
+        "Other Concerns": form.otherConcerns,
+        "Other Concerns Notes": form.otherConcernsNotes,
+        "Drug Test Results": form.drugTestResults,
+        "Breathalyzer Results": form.breathalyzerResults,
       };
+      if (hasChildren) {
+        fields["School Attendance"] = form.schoolAttendance;
+        fields["Behavioral Support Needs"] = form.behavioralSupport;
+        fields["Childcare Concerns"] = form.childcareConcerns;
+        fields["Childcare Notes"] = form.childcareNotes;
+      }
       await atFetch("Visit Reports", "POST", { records: [{ fields }] });
       setSubmitted(true);
     } catch (e) { setError("Submission failed. Please check your connection and try again."); }
@@ -406,6 +526,7 @@ function CareForm({ coordinatorRecord, properties }) {
   return (
     <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
       <ErrorBox msg={error} />
+
       <Card title="Visit Information" icon="📋">
         <Input label="Date of Visit" value={form.date} onChange={v => set("date", v)} type="date" required />
         <div style={{ background: "#e8f0f8", borderRadius: 7, padding: "8px 12px", fontSize: 13, color: C.blue, fontWeight: 600, marginBottom: 12 }}>
@@ -415,82 +536,110 @@ function CareForm({ coordinatorRecord, properties }) {
           options={residents.map(r => ({ value: r.id, label: r.fields.Name }))}
           placeholder={residents.length ? "Select resident…" : "No active residents at your property"} required />
       </Card>
-      <Card title="Weekly House Maintenance" icon="🏠">
-        <CheckItem label="Cleanliness reviewed" checked={form.cleanliness} onChange={() => toggle("cleanliness")}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[["kitchen", "Kitchen"], ["bathrooms", "Bathrooms"], ["floors", "Floors"]].map(([k, l]) => (
-              <div key={k} style={{ flex: 1, minWidth: 80 }}>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 3, fontWeight: 600 }}>{l}</div>
-                <input value={form[k]} onChange={e => set(k, e.target.value)} placeholder="Notes"
-                  style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, background: C.light, outline: "none", boxSizing: "border-box" }} />
+
+      <Card title="Spiritual Growth" icon="✝️">
+        <YesNo label="Church Attendance?" value={form.churchAttendance} onChange={v => set("churchAttendance", v)} required>
+          <Input label="Where?" value={form.churchName} onChange={v => set("churchName", v)} placeholder="Church name" />
+        </YesNo>
+        <YesNo label="Has a Bible reading plan?" value={form.bibleReadingPlan} onChange={v => set("bibleReadingPlan", v)} required />
+        <YesNo label="Prayer requests?" value={form.prayerRequests} onChange={v => set("prayerRequests", v)} required>
+          <Textarea label="Prayer request details" value={form.prayerRequestNotes} onChange={v => set("prayerRequestNotes", v)} placeholder="List prayer requests…" />
+        </YesNo>
+        <YesNo label="Other needs to encourage spiritual growth?" value={form.spiritualGrowthNotes !== ""} onChange={v => { if (!v) set("spiritualGrowthNotes", ""); }} required>
+          <Textarea label="Notes" value={form.spiritualGrowthNotes} onChange={v => set("spiritualGrowthNotes", v)} placeholder="Describe other spiritual needs…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Weekly Participation" icon="🤝">
+        <YesNo label="Work schedule, attendance or concerns?" value={form.workSchedule} onChange={v => set("workSchedule", v)} required>
+          <Textarea label="Notes" value={form.workConcernsNotes} onChange={v => set("workConcernsNotes", v)} placeholder="Describe work concerns…" />
+        </YesNo>
+        <YesNo label="Attending therapy?" value={form.attendingTherapy} onChange={v => set("attendingTherapy", v)} required />
+        <YesNo label="Attending classes? (Jobs for Life, Faith and Finances, Mastering Debt)" value={form.attendingClasses} onChange={v => set("attendingClasses", v)} required>
+          <Input label="Current class and mentor" value={form.currentClassMentor} onChange={v => set("currentClassMentor", v)} placeholder="Class name and mentor" />
+        </YesNo>
+        <YesNo label="Attending recovery meeting?" value={form.attendingRecoveryMeeting} onChange={v => set("attendingRecoveryMeeting", v)} required />
+      </Card>
+
+      <Card title="House Maintenance" icon="🏠">
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks <span style={{ color: C.danger }}>*</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {[["kitchenClean", "Kitchen"], ["bathroomsClean", "Bathrooms"], ["floorsClean", "Floors"]].map(([k, l]) => (
+              <div key={k}>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4, fontWeight: 600 }}>{l}</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => set(k, true)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `2px solid ${form[k] === true ? C.green : C.border}`, background: form[k] === true ? C.green : C.white, color: form[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Y</button>
+                  <button onClick={() => set(k, false)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `2px solid ${form[k] === false ? C.danger : C.border}`, background: form[k] === false ? C.danger : C.white, color: form[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>N</button>
+                </div>
               </div>
             ))}
           </div>
-        </CheckItem>
-        <CheckItem label="Laundry done" checked={form.laundry} onChange={() => toggle("laundry")} />
-        <CheckItem label="Trash removed and to curb" checked={form.trash} onChange={() => toggle("trash")} />
-        <CheckItem label="Any repairs needed?" checked={form.repairs} onChange={() => toggle("repairs")} />
-        <Textarea label="Improvement needed by next week" value={form.improvementNeeded} onChange={v => set("improvementNeeded", v)} placeholder="Describe any needed improvements…" />
+        </div>
+        <YesNo label="Laundry?" value={form.laundry} onChange={v => set("laundry", v)} required />
+        <YesNo label="Trash removed and to curb?" value={form.trashRemoved} onChange={v => set("trashRemoved", v)} required />
+        <YesNo label="Repair or house concerns?" value={form.repairsNeeded} onChange={v => set("repairsNeeded", v)} required>
+          <Textarea label="Repair notes" value={form.repairNotes} onChange={v => set("repairNotes", v)} placeholder="Describe repairs needed…" />
+        </YesNo>
+        <YesNo label="Meal prep / fast food concerns?" value={form.mealPrepConcerns} onChange={v => set("mealPrepConcerns", v)} required>
+          <Textarea label="Notes" value={form.mealPrepNotes} onChange={v => set("mealPrepNotes", v)} placeholder="Describe meal prep concerns…" />
+        </YesNo>
       </Card>
-      <Card title="Weekly Agreement Compliance" icon="📄">
-        <CheckItem label="No smoking/drugs" checked={form.noSmokingDrugs} onChange={() => toggle("noSmokingDrugs")} />
-        <CheckItem label="Communication on house visitors/security camera concerns" checked={form.visitorSecurity} onChange={() => toggle("visitorSecurity")} />
-        <CheckItem label="Rent payment concerns" checked={form.rentPayment} onChange={() => toggle("rentPayment")} />
-        <CheckItem label="Reminder to lock all doors/garage doors when leaving" checked={form.lockDoors} onChange={() => toggle("lockDoors")} />
+
+      <Card title="Agreement Compliance" icon="📄">
+        <YesNo label="Alcohol, drug and nicotine compliance?" value={form.alcoholDrugsNicotine} onChange={v => set("alcoholDrugsNicotine", v)} required />
+        <YesNo label="Discussed visitors policy?" value={form.visitorsPolicy} onChange={v => set("visitorsPolicy", v)} required />
+        <YesNo label="Program fee of $300 paid by 1st of month?" value={form.programFeePaid} onChange={v => set("programFeePaid", v)} required />
+        <YesNo label="Any non-compliance issues?" value={form.nonComplianceNotes !== ""} onChange={v => { if (!v) set("nonComplianceNotes", ""); }} required>
+          <Textarea label="Non-compliance notes" value={form.nonComplianceNotes} onChange={v => set("nonComplianceNotes", v)} placeholder="Describe non-compliance…" />
+        </YesNo>
       </Card>
-      <Card title="Weekly Participation" icon="🤝">
-        <CheckItem label="Work schedule, attendance or concerns" checked={form.workSchedule} onChange={() => toggle("workSchedule")} />
-        <CheckItem label="Attending therapy sessions" checked={form.therapySessions} onChange={() => toggle("therapySessions")}>
-          <Textarea label="What did the resident get out of their last session?" value={form.therapyNotes} onChange={v => set("therapyNotes", v)} placeholder="Session takeaways…" />
-        </CheckItem>
-        <CheckItem label="Faith & Finances Class" checked={form.faithFinances} onChange={() => toggle("faithFinances")} />
-        <CheckItem label="Parenting class" checked={form.parentingClass} onChange={() => toggle("parentingClass")} />
+
+      <Card title="Financial Goals" icon="💰">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <Input label="Employer Name" value={form.employerName} onChange={v => set("employerName", v)} placeholder="Employer" />
+          <Input label="Pay Rate" value={form.payRate} onChange={v => set("payRate", v)} placeholder="$/hr or salary" />
+          <Input label="Checking Account Balance" value={form.checkingBalance} onChange={v => set("checkingBalance", v)} placeholder="$0.00" />
+          <Input label="Savings Account Balance" value={form.savingsBalance} onChange={v => set("savingsBalance", v)} placeholder="$0.00" />
+        </div>
+        <YesNo label="Reviewed income goals (3, 6, 9, 12 months)?" value={form.incomeGoalsReviewed} onChange={v => set("incomeGoalsReviewed", v)} required />
+        <YesNo label="Any setbacks?" value={form.financialSetbacks} onChange={v => set("financialSetbacks", v)} required>
+          <Textarea label="Setback notes" value={form.financialSetbackNotes} onChange={v => set("financialSetbackNotes", v)} placeholder="Describe setbacks…" />
+        </YesNo>
       </Card>
-      <Card title="Weekly Spiritual Growth & Accountability" icon="✝️">
-        <CheckItem label="Church attendance" checked={form.churchAttendance} onChange={() => toggle("churchAttendance")} />
-        <CheckItem label="Tithe" checked={form.tithe} onChange={() => toggle("tithe")} />
-        <Textarea label="What are you hearing from God?" value={form.hearingFromGod} onChange={v => set("hearingFromGod", v)} placeholder="Notes from conversation…" />
+
+      {hasChildren && (
+        <Card title="Single Parenting Concerns" icon="👶">
+          <YesNo label="School attendance concerns?" value={form.schoolAttendance} onChange={v => set("schoolAttendance", v)} required />
+          <YesNo label="Behavioral support needs?" value={form.behavioralSupport} onChange={v => set("behavioralSupport", v)} required />
+          <YesNo label="Childcare concerns?" value={form.childcareConcerns} onChange={v => set("childcareConcerns", v)} required>
+            <Textarea label="Childcare notes" value={form.childcareNotes} onChange={v => set("childcareNotes", v)} placeholder="Describe childcare concerns…" />
+          </YesNo>
+        </Card>
+      )}
+
+      <Card title="Transportation / DriveWise" icon="🚗">
+        <YesNo label="Oil change needed?" value={form.oilChangeNeeded} onChange={v => set("oilChangeNeeded", v)} required />
+        <YesNo label="Car insurance up to date and paid?" value={form.carInsuranceCurrent} onChange={v => set("carInsuranceCurrent", v)} required />
+        <YesNo label="Other vehicle concerns?" value={form.vehicleConcerns} onChange={v => set("vehicleConcerns", v)} required>
+          <Textarea label="Vehicle notes" value={form.vehicleNotes} onChange={v => set("vehicleNotes", v)} placeholder="Describe vehicle concerns…" />
+        </YesNo>
       </Card>
-      <Card title="Weekly Financial Goals Review" icon="💰">
-        <CheckItem label="Review checking and savings accounts" checked={form.checkingSavings} onChange={() => toggle("checkingSavings")} />
-        <CheckItem label="Are they paying down debt?" checked={form.payingDebt} onChange={() => toggle("payingDebt")} />
-        <CheckItem label="Preparing to transition out — are they saving?" checked={form.savingForTransition} onChange={() => toggle("savingForTransition")} />
-        <Input label="Goal date to begin transition application process" value={form.transitionGoalDate} onChange={v => set("transitionGoalDate", v)} type="date" />
+
+      <Card title="Any Other Concerns?" icon="💬">
+        <YesNo label="Any other concerns?" value={form.otherConcerns} onChange={v => set("otherConcerns", v)} required>
+          <Textarea label="Notes" value={form.otherConcernsNotes} onChange={v => set("otherConcernsNotes", v)} placeholder="Describe any other concerns…" />
+        </YesNo>
       </Card>
-      <Card title="Housing Team Communication" icon="📞">
-        <Textarea label="Needs the team can help with" value={form.teamHelp} onChange={v => set("teamHelp", v)} placeholder="What does this resident need from the team?" />
-        <Input label="Next Quarterly Meeting" value={form.nextQuarterlyMeeting} onChange={v => set("nextQuarterlyMeeting", v)} type="date" />
-        <Textarea label="Prayer Concerns" value={form.prayerConcerns} onChange={v => set("prayerConcerns", v)} placeholder="Prayer requests from this visit…" />
-      </Card>
-      <Card title="Monthly Testing (if applicable)" icon="🧪">
+
+      <Card title="Monthly Tests (if applicable)" icon="🧪">
         <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 7, padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#7a5a10" }}>
-          Complete only during months when testing occurs.
+          Complete only during months when testing occurs. Not required.
         </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 3, fontWeight: 600 }}>Drug Test Results</div>
-            <input value={form.drugTestResults} onChange={e => set("drugTestResults", e.target.value)} placeholder="Result"
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: `1.5px solid ${C.border}`, fontSize: 14, background: C.light, outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 3, fontWeight: 600 }}>Reported to Probation</div>
-            <input value={form.drugReportedToProbation} onChange={e => set("drugReportedToProbation", e.target.value)} placeholder="Yes / No / N/A"
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: `1.5px solid ${C.border}`, fontSize: 14, background: C.light, outline: "none", boxSizing: "border-box" }} />
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 3, fontWeight: 600 }}>Breathalyzer Results</div>
-            <input value={form.breathalyzerResults} onChange={e => set("breathalyzerResults", e.target.value)} placeholder="Result"
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: `1.5px solid ${C.border}`, fontSize: 14, background: C.light, outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 3, fontWeight: 600 }}>Reported to Probation</div>
-            <input value={form.breathalyzerReportedToProbation} onChange={e => set("breathalyzerReportedToProbation", e.target.value)} placeholder="Yes / No / N/A"
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: `1.5px solid ${C.border}`, fontSize: 14, background: C.light, outline: "none", boxSizing: "border-box" }} />
-          </div>
-        </div>
+        <Input label="Drug Test Results" value={form.drugTestResults} onChange={v => set("drugTestResults", v)} placeholder="Results" />
+        <Input label="Breathalyzer Test Results" value={form.breathalyzerResults} onChange={v => set("breathalyzerResults", v)} placeholder="Results" />
       </Card>
+
       <Btn full onClick={handleSubmit} disabled={submitting} color={C.gold}>
         {submitting ? "Submitting…" : "Submit Weekly Visit Report"}
       </Btn>
@@ -507,7 +656,7 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   const [newCoord, setNewCoord] = useState({ name: "", propertyId: "", phone: "", email: "", password: "" });
-  const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "" });
+  const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
   const [newProperty, setNewProperty] = useState({ name: "" });
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
@@ -551,8 +700,8 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
     if (!newResident.name || !newResident.propertyId) { setError("Resident name and property are required."); return; }
     setSaving(true); setError("");
     try {
-      await atFetch("Residents", "POST", { records: [{ fields: { Name: newResident.name, Property: [newResident.propertyId], "Move In Date": newResident.moveIn || null, Status: "Active" } }] });
-      setNewResident({ name: "", propertyId: "", moveIn: "" });
+      await atFetch("Residents", "POST", { records: [{ fields: { Name: newResident.name, Property: [newResident.propertyId], "Move In Date": newResident.moveIn || null, Status: "Active", "Has Children": newResident.hasChildren } }] });
+      setNewResident({ name: "", propertyId: "", moveIn: "", hasChildren: false });
       flash("Resident added successfully."); await reload();
     } catch (e) { setError("Could not add resident."); }
     setSaving(false);
@@ -673,6 +822,7 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
             <Input label="Full Name" value={newResident.name} onChange={v => setNewResident(p => ({ ...p, name: v }))} placeholder="Resident's full name" required />
             <SelectField label="Property" value={newResident.propertyId} onChange={v => setNewResident(p => ({ ...p, propertyId: v }))} options={propOptions} placeholder="Select property…" required />
             <Input label="Move In Date" value={newResident.moveIn} onChange={v => setNewResident(p => ({ ...p, moveIn: v }))} type="date" />
+            <CheckItem label="Has Children" checked={newResident.hasChildren} onChange={() => setNewResident(p => ({ ...p, hasChildren: !p.hasChildren }))} />
             <Btn onClick={addResident} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Resident"}</Btn>
           </Card>
           <Card title={`Residents (${allResidents.filter(r => r.fields.Status === "Active").length} active)`} icon="🏠">
@@ -685,6 +835,7 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
                     <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: r.fields.Status === "Active" ? "#d4edda" : "#f8d7da", color: r.fields.Status === "Active" ? C.green : C.danger }}>
                       {r.fields.Status || "Active"}
                     </span>
+                    {r.fields["Has Children"] && <span style={{ marginLeft: 6, fontSize: 11 }}>👶</span>}
                   </div>
                   <div style={{ fontSize: 13, color: C.muted }}>{r.fields.Property ? propName(r.fields.Property[0]) : "No property"}{r.fields["Move In Date"] ? ` · Moved in ${r.fields["Move In Date"]}` : ""}</div>
                 </div>
