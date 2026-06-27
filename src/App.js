@@ -385,7 +385,6 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                     <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks</div>
                     <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "12px", background: C.light }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                        {[["Kitchen Clean", "Kitchen"], ["Bathrooms Clean", "Bathrooms"], ["Floors Clean", "Floors"]].map(([k, l]) => (
                         {[["Kitchen Clean", "Kitchen"], ["Bathrooms Clean", "Bathrooms"], ["Floors Clean", "Floors"]].map(([k, l]) => {
                             const val = f[k] === true ? true : false;
                             return (
