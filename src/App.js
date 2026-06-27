@@ -1096,7 +1096,7 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
       ) : isED ? (
         <>
           <Card title="Current Admins" icon="👑">
-            {allAdmins.map(a => (
+            {allAdmins.filter(a => a.fields.Email !== FALLBACK_ADMIN).map(a => (
               <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                 <div>
                   <div style={{ fontWeight: 600, color: C.text }}>👑 {a.fields.Email}</div>
