@@ -918,7 +918,7 @@ export default function App() {
   const [properties, setProperties] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
-  const [tab, setTab] = useState("form");
+  const [tab, setTab] = useState("history");
 
   const isAdmin = admins.some(a => a.fields?.Email?.toLowerCase() === user?.email?.toLowerCase());
 
@@ -979,12 +979,79 @@ export default function App() {
       </div>
       {tab === "form" && (
         isAdmin ? (
-          <div style={{ maxWidth: 540, margin: "40px auto", padding: "0 14px", textAlign: "center" }}>
-            <div style={{ background: C.white, borderRadius: 12, padding: 32, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>👑</div>
-              <h2 style={{ color: C.blue, margin: "0 0 8px" }}>Admin Account</h2>
-              <p style={{ color: C.muted }}>Use the History tab to view all visit reports, or Admin to manage coordinators, residents, properties, and admins.</p>
+          <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
+            <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18, fontSize: 14, color: "#7a5a10" }}>
+              📋 This is a <strong>reference view</strong> of the care coordinator form. Coordinators fill this out weekly at this same URL after logging in with their own account.
             </div>
+            <Card title="Visit Information" icon="📋">
+              <div style={{ fontSize: 14, color: C.muted }}>Date · Coordinator name · Property auto-fill · Resident dropdown</div>
+            </Card>
+            <Card title="Spiritual Growth" icon="✝️">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Church attendance? (if Yes → church name)<br/>
+                • Has a Bible reading plan?<br/>
+                • Prayer requests? (if Yes → details)<br/>
+                • Other spiritual growth needs? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Weekly Participation" icon="🤝">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Work schedule, attendance or concerns? (if Yes → notes)<br/>
+                • Attending therapy?<br/>
+                • Attending classes — Jobs for Life, Faith and Finances, Mastering Debt? (if Yes → class and mentor)<br/>
+                • Attending recovery meeting?
+              </div>
+            </Card>
+            <Card title="House Maintenance" icon="🏠">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Cleanliness — Kitchen / Bathrooms / Floors (Y/N each)<br/>
+                • Laundry?<br/>
+                • Trash removed and to curb?<br/>
+                • Repair or house concerns? (if Yes → notes)<br/>
+                • Meal prep / fast food concerns? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Agreement Compliance" icon="📄">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Alcohol, drug and nicotine compliance?<br/>
+                • Discussed visitors policy?<br/>
+                • Program fee of $300 paid by 1st of month?<br/>
+                • Any non-compliance issues? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Financial Goals" icon="💰">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Employer name · Pay rate<br/>
+                • Checking account balance · Savings account balance<br/>
+                • Reviewed income goals (3, 6, 9, 12 months)?<br/>
+                • Any setbacks? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Single Parenting Concerns" icon="👶">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                <em>Only shown for residents with "Has Children" flagged</em><br/>
+                • School attendance concerns?<br/>
+                • Behavioral support needs?<br/>
+                • Childcare concerns? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Transportation / DriveWise" icon="🚗">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                • Oil change needed?<br/>
+                • Car insurance up to date and paid?<br/>
+                • Other vehicle concerns? (if Yes → notes)
+              </div>
+            </Card>
+            <Card title="Any Other Concerns?" icon="💬">
+              <div style={{ fontSize: 14, color: C.muted }}>• Any other concerns? (if Yes → notes)</div>
+            </Card>
+            <Card title="Monthly Tests (if applicable)" icon="🧪">
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
+                <em>Not required — complete only during testing months</em><br/>
+                • Drug test results<br/>
+                • Breathalyzer test results
+              </div>
+            </Card>
           </div>
         ) : !coordinatorRecord ? (
           <div style={{ maxWidth: 540, margin: "40px auto", padding: "0 14px", textAlign: "center" }}>
