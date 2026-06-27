@@ -664,6 +664,7 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
   const [newProperty, setNewProperty] = useState({ name: "" });
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
 
   const flash = (msg) => { setSuccess(msg); setTimeout(() => setSuccess(""), 4000); };
   const activeProperties = allProperties.filter(p => p.fields?.Status !== "Archived");
@@ -751,14 +752,19 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
   };
 
   const addAdmin = async () => {
-    if (!newAdminEmail) { setError("Email is required."); return; }
+    if (!newAdminEmail || !newAdminPassword) { setError("Email and password are both required."); return; }
+    if (newAdminPassword.length < 6) { setError("Password must be at least 6 characters."); return; }
     setSaving(true); setError("");
     try {
+      await createUserWithEmailAndPassword(auth, newAdminEmail, newAdminPassword);
       await atFetch("Admins", "POST", { records: [{ fields: { Email: newAdminEmail.toLowerCase() } }] });
       setNewAdminEmail("");
-      flash("Admin added! Remember to also add them in Firebase Authentication at console.firebase.google.com so they can log in.");
+      setNewAdminPassword("");
+      flash("Admin added and login created! Share their email and temporary password with them — they can reset it anytime.");
       await reload();
-    } catch (e) { setError("Could not add admin."); }
+    } catch (e) {
+      setError(e.code === "auth/email-already-in-use" ? "That email already has a login account." : "Could not add admin: " + e.message);
+    }
     setSaving(false);
   };
 
@@ -898,10 +904,11 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
           </Card>
           <Card title="Add New Admin" icon="➕">
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
-              After adding an admin here, you must also add them in Firebase Authentication at console.firebase.google.com so they can log in.
+              Enter the new admin's email and a temporary password. They will use these to log in and can reset their password anytime.
             </div>
             <Input label="Admin Email Address" value={newAdminEmail} onChange={setNewAdminEmail} type="email" placeholder="admin@email.com" required />
-            <Btn onClick={addAdmin} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Admin"}</Btn>
+            <Input label="Temporary Password" value={newAdminPassword} onChange={setNewAdminPassword} type="password" placeholder="Minimum 6 characters" required />
+            <Btn onClick={addAdmin} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Admin & Create Login"}</Btn>
           </Card>
         </>
       )}
