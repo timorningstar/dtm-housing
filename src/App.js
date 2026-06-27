@@ -11,6 +11,8 @@ import {
 const AIRTABLE_TOKEN = "patGpUSXE9DpLa1lc.a1f186163cd47cdc77cd52a3c11b26c2bcedcd2baa42b0e0fe4aa48a50b2459f";
 const BASE_ID = "appTT0dGIUwigWKxB";
 const FALLBACK_ADMIN = "t1@downtownmin.org";
+const ROLES = { ED: "Executive Director", WOMENS: "Women's Director", MENS: "Men's Director" };
+const GENDERS = { WOMENS: "Women's Housing", MENS: "Men's Housing" };
 
 const C = {
   blue: "#1a3a5c", gold: "#c8952a", light: "#f0f4f8", white: "#ffffff",
@@ -40,6 +42,7 @@ const fetchAll = async (table) => {
   return records;
 };
 
+// ── Shared UI ──────────────────────────────────────────────────
 const Input = ({ label, value, onChange, type = "text", placeholder, required }) => (
   <div style={{ marginBottom: 12 }}>
     {label && <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>{label}{required && <span style={{ color: C.danger }}> *</span>}</div>}
@@ -67,13 +70,13 @@ const SelectField = ({ label, value, onChange, options, placeholder, required })
   </div>
 );
 
-const CheckItem = ({ label, checked, onChange, children, required }) => (
+const CheckItem = ({ label, checked, onChange, children }) => (
   <div style={{ marginBottom: 10 }}>
     <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
       <div onClick={onChange} style={{ width: 22, height: 22, minWidth: 22, border: `2px solid ${checked ? C.gold : C.border}`, borderRadius: 4, background: checked ? C.gold : C.white, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1, cursor: "pointer" }}>
         {checked && <svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1.5 5L5 8.5L11.5 1.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </div>
-      <span style={{ fontSize: 15, color: C.text, lineHeight: 1.4 }}>{label}{required && <span style={{ color: C.danger }}> *</span>}</span>
+      <span style={{ fontSize: 15, color: C.text, lineHeight: 1.4 }}>{label}</span>
     </label>
     {children && checked && <div style={{ marginLeft: 32, marginTop: 6 }}>{children}</div>}
   </div>
@@ -85,16 +88,8 @@ const YesNo = ({ label, value, onChange, children, required }) => (
       {label}{required && <span style={{ color: C.danger }}> *</span>}
     </div>
     <div style={{ display: "flex", gap: 10 }}>
-      <button onClick={() => onChange(true)} style={{
-        flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === true ? C.green : C.border}`,
-        background: value === true ? C.green : C.white, color: value === true ? C.white : C.muted,
-        fontWeight: 700, fontSize: 14, cursor: "pointer",
-      }}>Yes</button>
-      <button onClick={() => onChange(false)} style={{
-        flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === false ? C.danger : C.border}`,
-        background: value === false ? C.danger : C.white, color: value === false ? C.white : C.muted,
-        fontWeight: 700, fontSize: 14, cursor: "pointer",
-      }}>No</button>
+      <button onClick={() => onChange(true)} style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === true ? C.green : C.border}`, background: value === true ? C.green : C.white, color: value === true ? C.white : C.muted, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Yes</button>
+      <button onClick={() => onChange(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: `2px solid ${value === false ? C.danger : C.border}`, background: value === false ? C.danger : C.white, color: value === false ? C.white : C.muted, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>No</button>
     </div>
     {value === true && children && <div style={{ marginTop: 8 }}>{children}</div>}
   </div>
@@ -107,6 +102,23 @@ const Card = ({ title, icon, children }) => (
       <span style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>{title}</span>
     </div>
     <div style={{ padding: "16px 18px" }}>{children}</div>
+  </div>
+);
+
+const ReadOnlyField = ({ label, value }) => (
+  <div style={{ marginBottom: 10 }}>
+    <div style={{ fontSize: 13, color: C.muted, marginBottom: 3, fontWeight: 600 }}>{label}</div>
+    <div style={{ fontSize: 14, color: value ? C.text : C.muted, padding: "8px 12px", background: C.light, borderRadius: 7, border: `1.5px solid ${C.border}` }}>{value || "—"}</div>
+  </div>
+);
+
+const ReadOnlyYesNo = ({ label, value }) => (
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ fontSize: 14, color: C.text, marginBottom: 6, fontWeight: 500 }}>{label}</div>
+    <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${value === true ? C.green : C.border}`, background: value === true ? C.green : C.white, color: value === true ? C.white : C.muted, fontWeight: 700, fontSize: 14 }}>Yes</div>
+      <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${value === false ? C.danger : C.border}`, background: value === false ? C.danger : C.white, color: value === false ? C.white : C.muted, fontWeight: 700, fontSize: 14 }}>No</div>
+    </div>
   </div>
 );
 
@@ -151,6 +163,9 @@ const PageHeader = ({ title, subtitle, userName, onSignOut, isAdmin, onAdminClic
   </div>
 );
 
+// ══════════════════════════════════════════════════════════════
+// LOGIN PAGE
+// ══════════════════════════════════════════════════════════════
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -161,9 +176,8 @@ function LoginPage() {
   const handleLogin = async () => {
     if (!email || !password) { setError("Please enter your email and password."); return; }
     setLoading(true); setError("");
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (e) { setError("Incorrect email or password. Please try again."); }
+    try { await signInWithEmailAndPassword(auth, email, password); }
+    catch (e) { setError("Incorrect email or password. Please try again."); }
     setLoading(false);
   };
 
@@ -197,13 +211,17 @@ function LoginPage() {
   );
 }
 
-function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allProperties, allResidents }) {
+// ══════════════════════════════════════════════════════════════
+// HISTORY PAGE — formatted like visit form
+// ══════════════════════════════════════════════════════════════
+function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allProperties, allResidents }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterProperty, setFilterProperty] = useState("");
   const [filterCoordinator, setFilterCoordinator] = useState("");
   const [expanded, setExpanded] = useState(null);
+  const isAdmin = !!adminRole;
 
   useEffect(() => { loadReports(); }, []);
 
@@ -221,26 +239,34 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
   const coordName = id => allCoordinators.find(c => c.id === id)?.fields?.Name || "—";
   const residentName = id => allResidents.find(r => r.id === id)?.fields?.Name || "—";
 
+  // Filter properties by role
+  const visiblePropertyIds = allProperties
+    .filter(p => {
+      if (adminRole === ROLES.ED) return true;
+      if (adminRole === ROLES.WOMENS) return p.fields?.Gender === GENDERS.WOMENS;
+      if (adminRole === ROLES.MENS) return p.fields?.Gender === GENDERS.MENS;
+      return false;
+    })
+    .map(p => p.id);
+
   const filtered = reports.filter(r => {
-    if (!isAdmin) {
-      const coordIds = r.fields.Coordinator || [];
-      return coordinatorRecord && coordIds.includes(coordinatorRecord.id);
-    }
-    if (filterProperty) {
-      const coordIds = r.fields.Coordinator || [];
-      const coord = allCoordinators.find(c => coordIds.includes(c.id));
-      const propIds = coord?.fields?.Properties || [];
-      if (!propIds.includes(filterProperty)) return false;
-    }
-    if (filterCoordinator) {
-      const coordIds = r.fields.Coordinator || [];
-      if (!coordIds.includes(filterCoordinator)) return false;
-    }
+    const coordIds = r.fields.Coordinator || [];
+    if (!isAdmin) return coordinatorRecord && coordIds.includes(coordinatorRecord.id);
+    const coord = allCoordinators.find(c => coordIds.includes(c.id));
+    const propIds = coord?.fields?.Properties || [];
+    const inScope = propIds.some(id => visiblePropertyIds.includes(id));
+    if (!inScope) return false;
+    if (filterProperty && !propIds.includes(filterProperty)) return false;
+    if (filterCoordinator && !coordIds.includes(filterCoordinator)) return false;
     return true;
   });
 
-  const yn = val => val === true ? "✅ Yes" : val === false ? "❌ No" : "—";
-  const txt = val => val || "—";
+  const visibleCoordinators = allCoordinators.filter(c => {
+    const propIds = c.fields?.Properties || [];
+    return propIds.some(id => visiblePropertyIds.includes(id));
+  });
+
+  const visibleProperties = allProperties.filter(p => visiblePropertyIds.includes(p.id) && p.fields?.Status !== "Archived");
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "18px 14px 40px" }}>
@@ -249,12 +275,12 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
         <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 180 }}>
             <SelectField label="Filter by Property" value={filterProperty} onChange={setFilterProperty}
-              options={allProperties.filter(p => p.fields?.Status !== "Archived").map(p => ({ value: p.id, label: p.fields.Name }))}
+              options={visibleProperties.map(p => ({ value: p.id, label: p.fields.Name }))}
               placeholder="All properties" />
           </div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <SelectField label="Filter by Coordinator" value={filterCoordinator} onChange={setFilterCoordinator}
-              options={allCoordinators.map(c => ({ value: c.id, label: c.fields.Name }))}
+              options={visibleCoordinators.map(c => ({ value: c.id, label: c.fields.Name }))}
               placeholder="All coordinators" />
           </div>
         </div>
@@ -273,101 +299,177 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
         const residentIds = r.fields.Resident || [];
         const rName = residentIds.length ? residentName(residentIds[0]) : "—";
         const f = r.fields;
+        const hasChildren = f["School Attendance"] !== undefined || f["Behavioral Support Needs"] !== undefined || f["Childcare Concerns"] !== undefined;
+
         return (
           <div key={r.id} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(26,58,92,0.07)" }}>
+            {/* Header */}
             <div onClick={() => setExpanded(isOpen ? null : r.id)}
               style={{ padding: "14px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: isOpen ? "#e8f0f8" : C.white }}>
               <div>
-                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"} &nbsp;·&nbsp; {rName}</div>
-                <div style={{ fontSize: 13, color: C.muted }}>{pName} · {cName}{isAdmin ? "" : ""}</div>
+                <div style={{ fontWeight: 700, color: C.blue, fontSize: 15 }}>{f.Date || "No date"} · {rName}</div>
+                <div style={{ fontSize: 13, color: C.muted }}>{pName} · {cName}</div>
               </div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 18 }}>{isOpen ? "▲" : "▼"}</div>
             </div>
+
+            {/* Expanded — formatted like the visit form */}
             {isOpen && (
-              <div style={{ padding: "16px 18px", borderTop: `1px solid ${C.border}`, fontSize: 14 }}>
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8 }}>✝️ Spiritual Growth</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  <div>Church Attendance: {yn(f["Church Attendance"])}</div>
-                  {f["Church Name"] && <div>Church: {f["Church Name"]}</div>}
-                  <div>Bible Reading Plan: {yn(f["Bible Reading Plan"])}</div>
-                  <div>Prayer Requests: {yn(f["Prayer Requests"])}</div>
-                </div>
-                {f["Prayer Request Notes"] && <div style={{ color: C.muted, marginBottom: 4 }}>Prayer: {f["Prayer Request Notes"]}</div>}
-                {f["Spiritual Growth Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Notes: {f["Spiritual Growth Notes"]}</div>}
+              <div style={{ borderTop: `1px solid ${C.border}` }}>
 
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🤝 Weekly Participation</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  <div>Work Schedule: {yn(f["Work Schedule"])}</div>
-                  <div>Attending Therapy: {yn(f["Therapy Sessions"])}</div>
-                  <div>Attending Classes: {yn(f["Attending Classes"])}</div>
-                  <div>Recovery Meeting: {yn(f["Attending Recovery Meeting"])}</div>
+                {/* Visit Info */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Visit Information</span>
                 </div>
-                {f["Current Class and Mentor"] && <div style={{ color: C.muted, marginBottom: 4 }}>Class/Mentor: {f["Current Class and Mentor"]}</div>}
-                {f["Work Concerns Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Work notes: {f["Work Concerns Notes"]}</div>}
-
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🏠 House Maintenance</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  <div>Kitchen: {yn(f["Kitchen Clean"])}</div>
-                  <div>Bathrooms: {yn(f["Bathrooms Clean"])}</div>
-                  <div>Floors: {yn(f["Floors Clean"])}</div>
-                  <div>Laundry: {yn(f["Laundry"])}</div>
-                  <div>Trash: {yn(f["Trash Removed"])}</div>
-                  <div>Repairs: {yn(f["Repairs Needed"])}</div>
-                  <div>Meal Prep: {yn(f["Meal Prep Concerns"])}</div>
+                <div style={{ padding: "14px 18px" }}>
+                  <div style={{ background: "#e8f0f8", borderRadius: 7, padding: "8px 12px", fontSize: 13, color: C.blue, fontWeight: 600 }}>
+                    👤 {cName} &nbsp;·&nbsp; 🏠 {pName} &nbsp;·&nbsp; 👤 Resident: {rName}
+                  </div>
                 </div>
-                {f["Repair Notes"] && <div style={{ color: C.muted, marginBottom: 4 }}>Repair notes: {f["Repair Notes"]}</div>}
-                {f["Meal Prep Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Meal prep: {f["Meal Prep Notes"]}</div>}
 
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>📄 Agreement Compliance</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  <div>Alcohol/Drugs/Nicotine: {yn(f["Alcohol Drugs Nicotine"])}</div>
-                  <div>Visitors Policy: {yn(f["Visitors Policy Discussed"])}</div>
-                  <div>Program Fee Paid: {yn(f["Program Fee Paid"])}</div>
+                {/* Spiritual Growth */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>✝️</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Spiritual Growth</span>
                 </div>
-                {f["Non Compliance Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Non-compliance: {f["Non Compliance Notes"]}</div>}
-
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>💰 Financial Goals</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  {f["Employer Name"] && <div>Employer: {f["Employer Name"]}</div>}
-                  {f["Pay Rate"] && <div>Pay Rate: {f["Pay Rate"]}</div>}
-                  {f["Checking Balance"] && <div>Checking: {f["Checking Balance"]}</div>}
-                  {f["Savings Balance"] && <div>Savings: {f["Savings Balance"]}</div>}
-                  <div>Income Goals Reviewed: {yn(f["Income Goals Reviewed"])}</div>
-                  <div>Setbacks: {yn(f["Financial Setbacks"])}</div>
+                <div style={{ padding: "14px 18px" }}>
+                  <ReadOnlyYesNo label="Church Attendance?" value={f["Church Attendance"]} />
+                  {f["Church Name"] && <ReadOnlyField label="Church Name" value={f["Church Name"]} />}
+                  <ReadOnlyYesNo label="Has a Bible reading plan?" value={f["Bible Reading Plan"]} />
+                  <ReadOnlyYesNo label="Prayer requests?" value={f["Prayer Requests"]} />
+                  {f["Prayer Request Notes"] && <ReadOnlyField label="Prayer Request Details" value={f["Prayer Request Notes"]} />}
+                  <ReadOnlyYesNo label="Other spiritual growth needs?" value={f["Spiritual Growth Notes"] ? true : (f["Spiritual Growth Notes"] === "" ? false : null)} />
+                  {f["Spiritual Growth Notes"] && <ReadOnlyField label="Spiritual Growth Notes" value={f["Spiritual Growth Notes"]} />}
                 </div>
-                {f["Financial Setback Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Setback notes: {f["Financial Setback Notes"]}</div>}
 
-                {(f["School Attendance"] !== undefined || f["Behavioral Support Needs"] !== undefined) && (
-                  <>
-                    <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>👶 Single Parenting</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                      <div>School Attendance: {yn(f["School Attendance"])}</div>
-                      <div>Behavioral Support: {yn(f["Behavioral Support Needs"])}</div>
-                      <div>Childcare Concerns: {yn(f["Childcare Concerns"])}</div>
+                {/* Weekly Participation */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>🤝</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Weekly Participation</span>
+                </div>
+                <div style={{ padding: "14px 18px" }}>
+                  <ReadOnlyYesNo label="Work schedule, attendance or concerns?" value={f["Work Schedule"]} />
+                  {f["Work Concerns Notes"] && <ReadOnlyField label="Work Notes" value={f["Work Concerns Notes"]} />}
+                  <ReadOnlyYesNo label="Attending therapy?" value={f["Therapy Sessions"]} />
+                  <ReadOnlyYesNo label="Attending classes?" value={f["Attending Classes"]} />
+                  {f["Current Class and Mentor"] && <ReadOnlyField label="Class & Mentor" value={f["Current Class and Mentor"]} />}
+                  <ReadOnlyYesNo label="Attending recovery meeting?" value={f["Attending Recovery Meeting"]} />
+                </div>
+
+                {/* House Maintenance */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>🏠</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>House Maintenance</span>
+                </div>
+                <div style={{ padding: "14px 18px" }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks</div>
+                    <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "12px", background: C.light }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        {[["Kitchen Clean", "Kitchen"], ["Bathrooms Clean", "Bathrooms"], ["Floors Clean", "Floors"]].map(([k, l]) => (
+                          <div key={k}>
+                            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600, textAlign: "center" }}>{l}</div>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${f[k] === true ? C.green : C.border}`, background: f[k] === true ? C.green : C.white, color: f[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>Y</div>
+                              <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${f[k] === false ? C.danger : C.border}`, background: f[k] === false ? C.danger : C.white, color: f[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>N</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {f["Childcare Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Childcare: {f["Childcare Notes"]}</div>}
+                  </div>
+                  <ReadOnlyYesNo label="Laundry?" value={f["Laundry"]} />
+                  <ReadOnlyYesNo label="Trash removed and to curb?" value={f["Trash Removed"]} />
+                  <ReadOnlyYesNo label="Repair or house concerns?" value={f["Repairs Needed"]} />
+                  {f["Repair Notes"] && <ReadOnlyField label="Repair Notes" value={f["Repair Notes"]} />}
+                  <ReadOnlyYesNo label="Meal prep / fast food concerns?" value={f["Meal Prep Concerns"]} />
+                  {f["Meal Prep Notes"] && <ReadOnlyField label="Meal Prep Notes" value={f["Meal Prep Notes"]} />}
+                </div>
+
+                {/* Agreement Compliance */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>📄</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Agreement Compliance</span>
+                </div>
+                <div style={{ padding: "14px 18px" }}>
+                  <ReadOnlyYesNo label="Alcohol, drug and nicotine compliance?" value={f["Alcohol Drugs Nicotine"]} />
+                  <ReadOnlyYesNo label="Discussed visitors policy?" value={f["Visitors Policy Discussed"]} />
+                  <ReadOnlyYesNo label="Program fee of $300 paid by 1st of month?" value={f["Program Fee Paid"]} />
+                  <ReadOnlyYesNo label="Any non-compliance issues?" value={f["Non Compliance Notes"] ? true : null} />
+                  {f["Non Compliance Notes"] && <ReadOnlyField label="Non-Compliance Notes" value={f["Non Compliance Notes"]} />}
+                </div>
+
+                {/* Financial Goals */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>💰</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Financial Goals</span>
+                </div>
+                <div style={{ padding: "14px 18px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <ReadOnlyField label="Employer Name" value={f["Employer Name"]} />
+                    <ReadOnlyField label="Pay Rate" value={f["Pay Rate"]} />
+                    <ReadOnlyField label="Checking Balance" value={f["Checking Balance"]} />
+                    <ReadOnlyField label="Savings Balance" value={f["Savings Balance"]} />
+                  </div>
+                  <ReadOnlyYesNo label="Reviewed income goals?" value={f["Income Goals Reviewed"]} />
+                  <ReadOnlyYesNo label="Any setbacks?" value={f["Financial Setbacks"]} />
+                  {f["Financial Setback Notes"] && <ReadOnlyField label="Setback Notes" value={f["Financial Setback Notes"]} />}
+                </div>
+
+                {/* Single Parenting — only if applicable */}
+                {hasChildren && (
+                  <>
+                    <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>👶</span>
+                      <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Single Parenting Concerns</span>
+                    </div>
+                    <div style={{ padding: "14px 18px" }}>
+                      <ReadOnlyYesNo label="School attendance concerns?" value={f["School Attendance"]} />
+                      <ReadOnlyYesNo label="Behavioral support needs?" value={f["Behavioral Support Needs"]} />
+                      <ReadOnlyYesNo label="Childcare concerns?" value={f["Childcare Concerns"]} />
+                      {f["Childcare Notes"] && <ReadOnlyField label="Childcare Notes" value={f["Childcare Notes"]} />}
+                    </div>
                   </>
                 )}
 
-                <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, marginTop: 12 }}>🚗 Transportation</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", marginBottom: 8 }}>
-                  <div>Oil Change Needed: {yn(f["Oil Change Needed"])}</div>
-                  <div>Car Insurance Current: {yn(f["Car Insurance Current"])}</div>
-                  <div>Vehicle Concerns: {yn(f["Vehicle Concerns"])}</div>
+                {/* Transportation */}
+                <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>🚗</span>
+                  <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Transportation / DriveWise</span>
                 </div>
-                {f["Vehicle Notes"] && <div style={{ color: C.muted, marginBottom: 8 }}>Vehicle: {f["Vehicle Notes"]}</div>}
+                <div style={{ padding: "14px 18px" }}>
+                  <ReadOnlyYesNo label="Oil change needed?" value={f["Oil Change Needed"]} />
+                  <ReadOnlyYesNo label="Car insurance up to date and paid?" value={f["Car Insurance Current"]} />
+                  <ReadOnlyYesNo label="Other vehicle concerns?" value={f["Vehicle Concerns"]} />
+                  {f["Vehicle Notes"] && <ReadOnlyField label="Vehicle Notes" value={f["Vehicle Notes"]} />}
+                </div>
 
+                {/* Other Concerns */}
                 {f["Other Concerns"] && (
-                  <div style={{ marginTop: 8, background: "#fff8ec", borderRadius: 7, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 4 }}>OTHER CONCERNS</div>
-                    <div>{f["Other Concerns Notes"] || "—"}</div>
-                  </div>
+                  <>
+                    <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>💬</span>
+                      <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Other Concerns</span>
+                    </div>
+                    <div style={{ padding: "14px 18px" }}>
+                      <ReadOnlyField label="Other Concerns Notes" value={f["Other Concerns Notes"]} />
+                    </div>
+                  </>
                 )}
 
+                {/* Monthly Tests */}
                 {(f["Drug Test Results"] || f["Breathalyzer Results"]) && (
-                  <div style={{ marginTop: 8, fontSize: 13, color: C.muted }}>
-                    Drug Test: {f["Drug Test Results"] || "—"} | Breathalyzer: {f["Breathalyzer Results"] || "—"}
-                  </div>
+                  <>
+                    <div style={{ background: C.blue, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>🧪</span>
+                      <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Monthly Tests</span>
+                    </div>
+                    <div style={{ padding: "14px 18px" }}>
+                      <ReadOnlyField label="Drug Test Results" value={f["Drug Test Results"]} />
+                      <ReadOnlyField label="Breathalyzer Results" value={f["Breathalyzer Results"]} />
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -378,30 +480,24 @@ function HistoryPage({ coordinatorRecord, isAdmin, allCoordinators, allPropertie
   );
 }
 
+// ══════════════════════════════════════════════════════════════
+// CARE FORM
+// ══════════════════════════════════════════════════════════════
 const emptyForm = {
   date: "", residentId: "",
-  // Spiritual Growth
   churchAttendance: null, churchName: "", bibleReadingPlan: null,
   prayerRequests: null, prayerRequestNotes: "", spiritualGrowthOther: null, spiritualGrowthNotes: "",
-  // Weekly Participation
   workSchedule: null, workConcernsNotes: "", attendingTherapy: null,
   attendingClasses: null, currentClassMentor: "", attendingRecoveryMeeting: null,
-  // House Maintenance
   kitchenClean: null, bathroomsClean: null, floorsClean: null,
   laundry: null, trashRemoved: null, repairsNeeded: null, repairNotes: "",
   mealPrepConcerns: null, mealPrepNotes: "",
-  // Agreement Compliance
   alcoholDrugsNicotine: null, visitorsPolicy: null, programFeePaid: null, nonCompliance: null, nonComplianceNotes: "",
-  // Financial Goals
   employerName: "", payRate: "", checkingBalance: "", savingsBalance: "",
   incomeGoalsReviewed: null, financialSetbacks: null, financialSetbackNotes: "",
-  // Single Parenting
   schoolAttendance: null, behavioralSupport: null, childcareConcerns: null, childcareNotes: "",
-  // Transportation
   oilChangeNeeded: null, carInsuranceCurrent: null, vehicleConcerns: null, vehicleNotes: "",
-  // Other
   otherConcerns: null, otherConcernsNotes: "",
-  // Monthly
   drugTestResults: "", breathalyzerResults: "",
 };
 
@@ -453,49 +549,26 @@ function CareForm({ coordinatorRecord, properties }) {
     setError(""); setSubmitting(true);
     try {
       const fields = {
-        "Date": form.date,
-        "Coordinator": [coordinatorRecord.id],
-        "Resident": [form.residentId],
-        "Church Attendance": form.churchAttendance,
-        "Church Name": form.churchName,
-        "Bible Reading Plan": form.bibleReadingPlan,
-        "Prayer Requests": form.prayerRequests,
-        "Prayer Request Notes": form.prayerRequestNotes,
-        "Spiritual Growth Notes": form.spiritualGrowthNotes,
-        "Work Schedule": form.workSchedule,
-        "Work Concerns Notes": form.workConcernsNotes,
-        "Therapy Sessions": form.attendingTherapy,
-        "Attending Classes": form.attendingClasses,
-        "Current Class and Mentor": form.currentClassMentor,
-        "Attending Recovery Meeting": form.attendingRecoveryMeeting,
-        "Kitchen Clean": form.kitchenClean,
-        "Bathrooms Clean": form.bathroomsClean,
-        "Floors Clean": form.floorsClean,
-        "Laundry": form.laundry,
-        "Trash Removed": form.trashRemoved,
-        "Repairs Needed": form.repairsNeeded,
-        "Repair Notes": form.repairNotes,
-        "Meal Prep Concerns": form.mealPrepConcerns,
-        "Meal Prep Notes": form.mealPrepNotes,
-        "Alcohol Drugs Nicotine": form.alcoholDrugsNicotine,
-        "Visitors Policy Discussed": form.visitorsPolicy,
-        "Program Fee Paid": form.programFeePaid,
-        "Non Compliance Notes": form.nonComplianceNotes,
-        "Employer Name": form.employerName,
-        "Pay Rate": form.payRate,
-        "Checking Balance": form.checkingBalance,
-        "Savings Balance": form.savingsBalance,
-        "Income Goals Reviewed": form.incomeGoalsReviewed,
-        "Financial Setbacks": form.financialSetbacks,
+        "Date": form.date, "Coordinator": [coordinatorRecord.id], "Resident": [form.residentId],
+        "Church Attendance": form.churchAttendance, "Church Name": form.churchName,
+        "Bible Reading Plan": form.bibleReadingPlan, "Prayer Requests": form.prayerRequests,
+        "Prayer Request Notes": form.prayerRequestNotes, "Spiritual Growth Notes": form.spiritualGrowthNotes,
+        "Work Schedule": form.workSchedule, "Work Concerns Notes": form.workConcernsNotes,
+        "Therapy Sessions": form.attendingTherapy, "Attending Classes": form.attendingClasses,
+        "Current Class and Mentor": form.currentClassMentor, "Attending Recovery Meeting": form.attendingRecoveryMeeting,
+        "Kitchen Clean": form.kitchenClean, "Bathrooms Clean": form.bathroomsClean, "Floors Clean": form.floorsClean,
+        "Laundry": form.laundry, "Trash Removed": form.trashRemoved, "Repairs Needed": form.repairsNeeded,
+        "Repair Notes": form.repairNotes, "Meal Prep Concerns": form.mealPrepConcerns, "Meal Prep Notes": form.mealPrepNotes,
+        "Alcohol Drugs Nicotine": form.alcoholDrugsNicotine, "Visitors Policy Discussed": form.visitorsPolicy,
+        "Program Fee Paid": form.programFeePaid, "Non Compliance Notes": form.nonComplianceNotes,
+        "Employer Name": form.employerName, "Pay Rate": form.payRate,
+        "Checking Balance": form.checkingBalance, "Savings Balance": form.savingsBalance,
+        "Income Goals Reviewed": form.incomeGoalsReviewed, "Financial Setbacks": form.financialSetbacks,
         "Financial Setback Notes": form.financialSetbackNotes,
-        "Oil Change Needed": form.oilChangeNeeded,
-        "Car Insurance Current": form.carInsuranceCurrent,
-        "Vehicle Concerns": form.vehicleConcerns,
-        "Vehicle Notes": form.vehicleNotes,
-        "Other Concerns": form.otherConcerns,
-        "Other Concerns Notes": form.otherConcernsNotes,
-        "Drug Test Results": form.drugTestResults,
-        "Breathalyzer Results": form.breathalyzerResults,
+        "Oil Change Needed": form.oilChangeNeeded, "Car Insurance Current": form.carInsuranceCurrent,
+        "Vehicle Concerns": form.vehicleConcerns, "Vehicle Notes": form.vehicleNotes,
+        "Other Concerns": form.otherConcerns, "Other Concerns Notes": form.otherConcernsNotes,
+        "Drug Test Results": form.drugTestResults, "Breathalyzer Results": form.breathalyzerResults,
       };
       if (hasChildren) {
         fields["School Attendance"] = form.schoolAttendance;
@@ -529,7 +602,6 @@ function CareForm({ coordinatorRecord, properties }) {
   return (
     <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
       <ErrorBox msg={error} />
-
       <Card title="Visit Information" icon="📋">
         <Input label="Date of Visit" value={form.date} onChange={v => set("date", v)} type="date" required />
         <div style={{ background: "#e8f0f8", borderRadius: 7, padding: "8px 12px", fontSize: 13, color: C.blue, fontWeight: 600, marginBottom: 12 }}>
@@ -539,7 +611,6 @@ function CareForm({ coordinatorRecord, properties }) {
           options={residents.map(r => ({ value: r.id, label: r.fields.Name }))}
           placeholder={residents.length ? "Select resident…" : "No active residents at your property"} required />
       </Card>
-
       <Card title="Spiritual Growth" icon="✝️">
         <YesNo label="Church Attendance?" value={form.churchAttendance} onChange={v => set("churchAttendance", v)} required>
           <Input label="Where?" value={form.churchName} onChange={v => set("churchName", v)} placeholder="Church name" />
@@ -552,7 +623,6 @@ function CareForm({ coordinatorRecord, properties }) {
           <Textarea label="Notes" value={form.spiritualGrowthNotes} onChange={v => set("spiritualGrowthNotes", v)} placeholder="Describe other spiritual needs…" />
         </YesNo>
       </Card>
-
       <Card title="Weekly Participation" icon="🤝">
         <YesNo label="Work schedule, attendance or concerns?" value={form.workSchedule} onChange={v => set("workSchedule", v)} required>
           <Textarea label="Notes" value={form.workConcernsNotes} onChange={v => set("workConcernsNotes", v)} placeholder="Describe work concerns…" />
@@ -563,7 +633,6 @@ function CareForm({ coordinatorRecord, properties }) {
         </YesNo>
         <YesNo label="Attending recovery meeting?" value={form.attendingRecoveryMeeting} onChange={v => set("attendingRecoveryMeeting", v)} required />
       </Card>
-
       <Card title="House Maintenance" icon="🏠">
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks <span style={{ color: C.danger }}>*</span></div>
@@ -590,7 +659,6 @@ function CareForm({ coordinatorRecord, properties }) {
           <Textarea label="Notes" value={form.mealPrepNotes} onChange={v => set("mealPrepNotes", v)} placeholder="Describe meal prep concerns…" />
         </YesNo>
       </Card>
-
       <Card title="Agreement Compliance" icon="📄">
         <YesNo label="Alcohol, drug and nicotine compliance?" value={form.alcoholDrugsNicotine} onChange={v => set("alcoholDrugsNicotine", v)} required />
         <YesNo label="Discussed visitors policy?" value={form.visitorsPolicy} onChange={v => set("visitorsPolicy", v)} required />
@@ -599,7 +667,6 @@ function CareForm({ coordinatorRecord, properties }) {
           <Textarea label="Non-compliance notes" value={form.nonComplianceNotes} onChange={v => set("nonComplianceNotes", v)} placeholder="Describe non-compliance…" />
         </YesNo>
       </Card>
-
       <Card title="Financial Goals" icon="💰">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
           <Input label="Employer Name" value={form.employerName} onChange={v => set("employerName", v)} placeholder="Employer" />
@@ -612,7 +679,6 @@ function CareForm({ coordinatorRecord, properties }) {
           <Textarea label="Setback notes" value={form.financialSetbackNotes} onChange={v => set("financialSetbackNotes", v)} placeholder="Describe setbacks…" />
         </YesNo>
       </Card>
-
       {hasChildren && (
         <Card title="Single Parenting Concerns" icon="👶">
           <YesNo label="School attendance concerns?" value={form.schoolAttendance} onChange={v => set("schoolAttendance", v)} required />
@@ -622,7 +688,6 @@ function CareForm({ coordinatorRecord, properties }) {
           </YesNo>
         </Card>
       )}
-
       <Card title="Transportation / DriveWise" icon="🚗">
         <YesNo label="Oil change needed?" value={form.oilChangeNeeded} onChange={v => set("oilChangeNeeded", v)} required />
         <YesNo label="Car insurance up to date and paid?" value={form.carInsuranceCurrent} onChange={v => set("carInsuranceCurrent", v)} required />
@@ -630,13 +695,11 @@ function CareForm({ coordinatorRecord, properties }) {
           <Textarea label="Vehicle notes" value={form.vehicleNotes} onChange={v => set("vehicleNotes", v)} placeholder="Describe vehicle concerns…" />
         </YesNo>
       </Card>
-
       <Card title="Any Other Concerns?" icon="💬">
         <YesNo label="Any other concerns?" value={form.otherConcerns} onChange={v => set("otherConcerns", v)} required>
           <Textarea label="Notes" value={form.otherConcernsNotes} onChange={v => set("otherConcernsNotes", v)} placeholder="Describe any other concerns…" />
         </YesNo>
       </Card>
-
       <Card title="Monthly Tests (if applicable)" icon="🧪">
         <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 7, padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#7a5a10" }}>
           Complete only during months when testing occurs. Not required.
@@ -644,7 +707,6 @@ function CareForm({ coordinatorRecord, properties }) {
         <Input label="Drug Test Results" value={form.drugTestResults} onChange={v => set("drugTestResults", v)} placeholder="Results" />
         <Input label="Breathalyzer Test Results" value={form.breathalyzerResults} onChange={v => set("breathalyzerResults", v)} placeholder="Results" />
       </Card>
-
       <Btn full onClick={handleSubmit} disabled={submitting} color={C.gold}>
         {submitting ? "Submitting…" : "Submit Weekly Visit Report"}
       </Btn>
@@ -655,36 +717,60 @@ function CareForm({ coordinatorRecord, properties }) {
   );
 }
 
-function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAdmins, reload }) {
+// ══════════════════════════════════════════════════════════════
+// ADMIN PAGE — role-based access
+// ══════════════════════════════════════════════════════════════
+function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResidents, allAdmins, reload }) {
+  const isED = adminRole === ROLES.ED;
+  const genderFilter = adminRole === ROLES.WOMENS ? GENDERS.WOMENS : adminRole === ROLES.MENS ? GENDERS.MENS : null;
+
   const [tab, setTab] = useState("coordinators");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   const [newCoord, setNewCoord] = useState({ name: "", propertyId: "", phone: "", email: "", password: "" });
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
-  const [newProperty, setNewProperty] = useState({ name: "" });
+  const [newProperty, setNewProperty] = useState({ name: "", gender: "" });
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState("");
 
   const flash = (msg) => { setSuccess(msg); setTimeout(() => setSuccess(""), 4000); };
-  const activeProperties = allProperties.filter(p => p.fields?.Status !== "Archived");
-  const archivedProperties = allProperties.filter(p => p.fields?.Status === "Archived");
+
+  // Filter properties by role
+  const visibleProperties = allProperties.filter(p => {
+    if (!genderFilter) return true;
+    return p.fields?.Gender === genderFilter;
+  });
+  const activeProperties = visibleProperties.filter(p => p.fields?.Status !== "Archived");
+  const archivedProperties = visibleProperties.filter(p => p.fields?.Status === "Archived");
   const propOptions = activeProperties.map(p => ({ value: p.id, label: p.fields.Name }));
   const propName = id => allProperties.find(p => p.id === id)?.fields?.Name || "—";
 
+  // Filter coordinators by role
+  const visibleCoordinators = allCoordinators.filter(c => {
+    if (!genderFilter) return true;
+    const propIds = c.fields?.Properties || [];
+    return propIds.some(id => activeProperties.find(p => p.id === id));
+  });
+
+  // Filter residents by role
+  const visibleResidents = allResidents.filter(r => {
+    if (!genderFilter) return true;
+    const propIds = r.fields?.Property || [];
+    return propIds.some(id => activeProperties.find(p => p.id === id));
+  });
+
   const addCoordinator = async () => {
-    if (!newCoord.name || !newCoord.propertyId || !newCoord.email || !newCoord.password) {
-      setError("Name, property, email and password are all required."); return;
-    }
+    if (!newCoord.name || !newCoord.propertyId || !newCoord.email || !newCoord.password) { setError("All fields are required."); return; }
     setSaving(true); setError("");
     try {
       await createUserWithEmailAndPassword(auth, newCoord.email, newCoord.password);
       await atFetch("Coordinators", "POST", { records: [{ fields: { Name: newCoord.name, Properties: [newCoord.propertyId], Phone: newCoord.phone, Email: newCoord.email } }] });
       setNewCoord({ name: "", propertyId: "", phone: "", email: "", password: "" });
-      flash("Coordinator added and login created successfully.");
-      await reload();
+      flash("Coordinator added and login created!"); await reload();
     } catch (e) {
-      setError(e.code === "auth/email-already-in-use" ? "That email already has a login account." : "Could not add coordinator: " + e.message);
+      setError(e.code === "auth/email-already-in-use" ? "That email already has a login." : "Could not add coordinator: " + e.message);
     }
     setSaving(false);
   };
@@ -703,12 +789,12 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
   };
 
   const addResident = async () => {
-    if (!newResident.name || !newResident.propertyId) { setError("Resident name and property are required."); return; }
+    if (!newResident.name || !newResident.propertyId) { setError("Name and property are required."); return; }
     setSaving(true); setError("");
     try {
       await atFetch("Residents", "POST", { records: [{ fields: { Name: newResident.name, Property: [newResident.propertyId], "Move In Date": newResident.moveIn || null, Status: "Active", "Has Children": newResident.hasChildren } }] });
       setNewResident({ name: "", propertyId: "", moveIn: "", hasChildren: false });
-      flash("Resident added successfully."); await reload();
+      flash("Resident added."); await reload();
     } catch (e) { setError("Could not add resident."); }
     setSaving(false);
   };
@@ -730,9 +816,13 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
 
   const addProperty = async () => {
     if (!newProperty.name) { setError("Property name is required."); return; }
+    const gender = genderFilter || newProperty.gender;
+    if (!gender) { setError("Please select a gender category for this property."); return; }
     setSaving(true); setError("");
-    try { await atFetch("Properties", "POST", { records: [{ fields: { Name: newProperty.name, Status: "Active" } }] }); setNewProperty({ name: "" }); flash("Property added."); await reload(); }
-    catch (e) { setError("Could not add property."); }
+    try {
+      await atFetch("Properties", "POST", { records: [{ fields: { Name: newProperty.name, Status: "Active", Gender: gender } }] });
+      setNewProperty({ name: "", gender: "" }); flash("Property added."); await reload();
+    } catch (e) { setError("Could not add property."); }
     setSaving(false);
   };
 
@@ -752,18 +842,16 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
   };
 
   const addAdmin = async () => {
-    if (!newAdminEmail || !newAdminPassword) { setError("Email and password are both required."); return; }
+    if (!newAdminEmail || !newAdminPassword || !newAdminRole) { setError("Email, password and role are all required."); return; }
     if (newAdminPassword.length < 6) { setError("Password must be at least 6 characters."); return; }
     setSaving(true); setError("");
     try {
       await createUserWithEmailAndPassword(auth, newAdminEmail, newAdminPassword);
-      await atFetch("Admins", "POST", { records: [{ fields: { Email: newAdminEmail.toLowerCase() } }] });
-      setNewAdminEmail("");
-      setNewAdminPassword("");
-      flash("Admin added and login created! Share their email and temporary password with them — they can reset it anytime.");
-      await reload();
+      await atFetch("Admins", "POST", { records: [{ fields: { Email: newAdminEmail.toLowerCase(), Role: newAdminRole } }] });
+      setNewAdminEmail(""); setNewAdminPassword(""); setNewAdminRole("");
+      flash("Admin added and login created! Share their credentials with them."); await reload();
     } catch (e) {
-      setError(e.code === "auth/email-already-in-use" ? "That email already has a login account." : "Could not add admin: " + e.message);
+      setError(e.code === "auth/email-already-in-use" ? "That email already has a login." : "Could not add admin: " + e.message);
     }
     setSaving(false);
   };
@@ -784,16 +872,23 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
     borderRadius: active ? "6px 6px 0 0" : 0,
   });
 
+  const roleLabel = adminRole === ROLES.WOMENS ? "Women's Housing" : adminRole === ROLES.MENS ? "Men's Housing" : "All Properties";
+
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "18px 14px 40px" }}>
-      <div style={{ marginBottom: 16 }}><Btn small outline onClick={onBack} color={C.blue}>← Back</Btn></div>
+      <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+        <Btn small outline onClick={onBack} color={C.blue}>← Back</Btn>
+        <div style={{ fontSize: 13, color: C.muted, background: C.light, padding: "5px 12px", borderRadius: 20, border: `1px solid ${C.border}` }}>
+          📍 Viewing: <strong>{roleLabel}</strong>
+        </div>
+      </div>
       <ErrorBox msg={error} />
       <SuccessBox msg={success} />
       <div style={{ display: "flex", borderBottom: `2px solid ${C.border}`, marginBottom: 20, flexWrap: "wrap" }}>
         <button style={tabStyle(tab === "coordinators")} onClick={() => setTab("coordinators")}>👤 Coordinators</button>
         <button style={tabStyle(tab === "residents")} onClick={() => setTab("residents")}>🏠 Residents</button>
         <button style={tabStyle(tab === "properties")} onClick={() => setTab("properties")}>📍 Properties</button>
-        <button style={tabStyle(tab === "admins")} onClick={() => setTab("admins")}>👑 Admins</button>
+        {isED && <button style={tabStyle(tab === "admins")} onClick={() => setTab("admins")}>👑 Admins</button>}
       </div>
 
       {tab === "coordinators" ? (
@@ -804,19 +899,18 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
             <Input label="Phone Number" value={newCoord.phone} onChange={v => setNewCoord(p => ({ ...p, phone: v }))} placeholder="(555) 000-0000" />
             <Input label="Email Address (login)" value={newCoord.email} onChange={v => setNewCoord(p => ({ ...p, email: v }))} type="email" placeholder="coordinator@email.com" required />
             <Input label="Temporary Password" value={newCoord.password} onChange={v => setNewCoord(p => ({ ...p, password: v }))} type="password" placeholder="Minimum 6 characters" required />
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>The coordinator will use this email and password to log in. They can reset their password anytime.</div>
             <Btn onClick={addCoordinator} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Coordinator & Create Login"}</Btn>
           </Card>
-          <Card title={`Current Coordinators (${allCoordinators.length})`} icon="👤">
-            {allCoordinators.length === 0 ? (
-              <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No coordinators added yet.</div>
-            ) : allCoordinators.map(c => (
+          <Card title={`Coordinators (${visibleCoordinators.length})`} icon="👤">
+            {visibleCoordinators.length === 0 ? (
+              <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No coordinators yet.</div>
+            ) : visibleCoordinators.map(c => (
               <div key={c.id} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{c.fields.Name}</div>
                     <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Properties ? propName(c.fields.Properties[0]) : "No property"}{c.fields.Phone ? ` · ${c.fields.Phone}` : ""}</div>
-                    <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Email || "No email on file"}</div>
+                    <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Email || "No email"}</div>
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     {c.fields.Email && <Btn small outline color={C.blue} onClick={() => resetPassword(c.fields.Email)} disabled={saving}>Reset PW</Btn>}
@@ -836,16 +930,14 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
             <CheckItem label="Has Children" checked={newResident.hasChildren} onChange={() => setNewResident(p => ({ ...p, hasChildren: !p.hasChildren }))} />
             <Btn onClick={addResident} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Resident"}</Btn>
           </Card>
-          <Card title={`Residents (${allResidents.filter(r => r.fields.Status === "Active").length} active)`} icon="🏠">
-            {allResidents.length === 0 ? (
-              <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No residents added yet.</div>
-            ) : allResidents.map(r => (
+          <Card title={`Residents (${visibleResidents.filter(r => r.fields.Status === "Active").length} active)`} icon="🏠">
+            {visibleResidents.length === 0 ? (
+              <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No residents yet.</div>
+            ) : visibleResidents.map(r => (
               <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                 <div>
                   <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{r.fields.Name}
-                    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: r.fields.Status === "Active" ? "#d4edda" : "#f8d7da", color: r.fields.Status === "Active" ? C.green : C.danger }}>
-                      {r.fields.Status || "Active"}
-                    </span>
+                    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: r.fields.Status === "Active" ? "#d4edda" : "#f8d7da", color: r.fields.Status === "Active" ? C.green : C.danger }}>{r.fields.Status || "Active"}</span>
                     {r.fields["Has Children"] && <span style={{ marginLeft: 6, fontSize: 11 }}>👶</span>}
                   </div>
                   <div style={{ fontSize: 13, color: C.muted }}>{r.fields.Property ? propName(r.fields.Property[0]) : "No property"}{r.fields["Move In Date"] ? ` · Moved in ${r.fields["Move In Date"]}` : ""}</div>
@@ -863,13 +955,21 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
       ) : tab === "properties" ? (
         <>
           <Card title="Add New Property" icon="➕">
-            <Input label="Property Name" value={newProperty.name} onChange={v => setNewProperty({ name: v })} placeholder="e.g. Elm Street House" required />
+            <Input label="Property Name" value={newProperty.name} onChange={v => setNewProperty(p => ({ ...p, name: v }))} placeholder="e.g. Elm Street House" required />
+            {isED && (
+              <SelectField label="Gender Category" value={newProperty.gender} onChange={v => setNewProperty(p => ({ ...p, gender: v }))}
+                options={[{ value: GENDERS.WOMENS, label: GENDERS.WOMENS }, { value: GENDERS.MENS, label: GENDERS.MENS }]}
+                placeholder="Select category…" required />
+            )}
             <Btn onClick={addProperty} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Property"}</Btn>
           </Card>
           <Card title={`Active Properties (${activeProperties.length})`} icon="📍">
             {activeProperties.map(p => (
               <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ fontWeight: 600, color: C.text }}>🏠 {p.fields.Name}</div>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.text }}>🏠 {p.fields.Name}</div>
+                  {isED && <div style={{ fontSize: 12, color: C.muted }}>{p.fields.Gender || "No category set"}</div>}
+                </div>
                 <Btn small outline color={C.muted} onClick={() => archiveProperty(p.id)} disabled={saving}>Archive</Btn>
               </div>
             ))}
@@ -885,17 +985,15 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
             </Card>
           )}
         </>
-      ) : (
+      ) : isED ? (
         <>
           <Card title="Current Admins" icon="👑">
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>
-              Admins have full access to all visit reports and can manage coordinators, residents, and properties. Each admin must also have a Firebase Authentication account to log in.
-            </div>
-            {allAdmins.length === 0 ? (
-              <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No admins found.</div>
-            ) : allAdmins.map(a => (
+            {allAdmins.map(a => (
               <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ fontWeight: 600, color: C.text }}>👑 {a.fields.Email}</div>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.text }}>👑 {a.fields.Email}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{a.fields.Role || "No role set"}</div>
+                </div>
                 {a.fields.Email !== FALLBACK_ADMIN && (
                   <Btn small danger onClick={() => removeAdmin(a.id, a.fields.Email)} disabled={saving}>Remove</Btn>
                 )}
@@ -903,23 +1001,34 @@ function AdminPage({ onBack, allCoordinators, allProperties, allResidents, allAd
             ))}
           </Card>
           <Card title="Add New Admin" icon="➕">
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
-              Enter the new admin's email and a temporary password. They will use these to log in and can reset their password anytime.
-            </div>
-            <Input label="Admin Email Address" value={newAdminEmail} onChange={setNewAdminEmail} type="email" placeholder="admin@email.com" required />
+            <Input label="Email Address" value={newAdminEmail} onChange={setNewAdminEmail} type="email" placeholder="director@email.com" required />
             <Input label="Temporary Password" value={newAdminPassword} onChange={setNewAdminPassword} type="password" placeholder="Minimum 6 characters" required />
+            <SelectField label="Role" value={newAdminRole} onChange={setNewAdminRole}
+              options={[
+                { value: ROLES.WOMENS, label: ROLES.WOMENS },
+                { value: ROLES.MENS, label: ROLES.MENS },
+                { value: ROLES.ED, label: ROLES.ED },
+              ]}
+              placeholder="Select role…" required />
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+              Women's Director sees only Women's Housing. Men's Director sees only Men's Housing. Executive Director sees everything.
+            </div>
             <Btn onClick={addAdmin} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Admin & Create Login"}</Btn>
           </Card>
         </>
-      )}
+      ) : null}
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════
+// APP ROOT
+// ══════════════════════════════════════════════════════════════
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [coordinatorRecord, setCoordinatorRecord] = useState(null);
+  const [adminRecord, setAdminRecord] = useState(null);
   const [coordinators, setCoordinators] = useState([]);
   const [residents, setResidents] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -927,7 +1036,8 @@ export default function App() {
   const [dataLoading, setDataLoading] = useState(false);
   const [tab, setTab] = useState("history");
 
-  const isAdmin = admins.some(a => a.fields?.Email?.toLowerCase() === user?.email?.toLowerCase());
+  const adminRole = adminRecord?.fields?.Role || null;
+  const isAdmin = !!adminRecord;
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
@@ -947,14 +1057,21 @@ export default function App() {
       setProperties(props.filter(p => p.fields?.Name));
       setAdmins(adms.filter(a => a.fields?.Email));
       if (user) {
-        const coord = coords.find(c => c.fields?.Email?.toLowerCase() === user.email?.toLowerCase());
-        setCoordinatorRecord(coord || null);
+        const admin = adms.find(a => a.fields?.Email?.toLowerCase() === user.email?.toLowerCase());
+        setAdminRecord(admin || null);
+        if (!admin) {
+          const coord = coords.find(c => c.fields?.Email?.toLowerCase() === user.email?.toLowerCase());
+          setCoordinatorRecord(coord || null);
+        }
       }
     } catch (e) { console.error("Data load error", e); }
     setDataLoading(false);
   };
 
-  const handleSignOut = async () => { await signOut(auth); setCoordinatorRecord(null); setTab("form"); };
+  const handleSignOut = async () => {
+    await signOut(auth);
+    setCoordinatorRecord(null); setAdminRecord(null); setTab("history");
+  };
 
   if (authLoading || dataLoading) return (
     <div style={{ minHeight: "100vh", background: C.blue, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -967,7 +1084,9 @@ export default function App() {
 
   if (!user) return <LoginPage />;
 
-  const userName = isAdmin ? "Admin" : (coordinatorRecord?.fields?.Name || user.email);
+  const roleLabel = adminRole === ROLES.ED ? "Executive Director" : adminRole === ROLES.WOMENS ? "Women's Director" : adminRole === ROLES.MENS ? "Men's Director" : null;
+  const userName = roleLabel || coordinatorRecord?.fields?.Name || user.email;
+  const subtitle = roleLabel ? `${roleLabel} View` : "Care Coordinator Portal";
 
   const tabStyle = active => ({
     flex: 1, padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer", border: "none",
@@ -977,88 +1096,39 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.light, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      <PageHeader title="DTM Housing" subtitle={isAdmin ? "Housing Director View" : "Care Coordinator Portal"}
-        userName={userName} onSignOut={handleSignOut} isAdmin={isAdmin} onAdminClick={() => setTab("admin")} />
+      <PageHeader title="DTM Housing" subtitle={subtitle} userName={userName}
+        onSignOut={handleSignOut} isAdmin={isAdmin} onAdminClick={() => setTab("admin")} />
       <div style={{ background: C.blue, display: "flex", borderBottom: `1px solid rgba(255,255,255,0.1)` }}>
         <button style={tabStyle(tab === "form")} onClick={() => setTab("form")}>📋 Visit Form</button>
         <button style={tabStyle(tab === "history")} onClick={() => setTab("history")}>📅 History</button>
         {isAdmin && <button style={tabStyle(tab === "admin")} onClick={() => setTab("admin")}>⚙️ Admin</button>}
       </div>
+
       {tab === "form" && (
         isAdmin ? (
           <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
             <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18, fontSize: 14, color: "#7a5a10" }}>
-              📋 This is a <strong>reference view</strong> of the care coordinator form. Coordinators fill this out weekly at this same URL after logging in with their own account.
+              📋 This is a <strong>reference view</strong> of the care coordinator form. Coordinators fill this out weekly after logging in with their own account.
             </div>
-            <Card title="Visit Information" icon="📋">
-              <div style={{ fontSize: 14, color: C.muted }}>Date · Coordinator name · Property auto-fill · Resident dropdown</div>
-            </Card>
-            <Card title="Spiritual Growth" icon="✝️">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Church attendance? (if Yes → church name)<br/>
-                • Has a Bible reading plan?<br/>
-                • Prayer requests? (if Yes → details)<br/>
-                • Other spiritual growth needs? (if Yes → notes)
+            {[
+              ["📋", "Visit Information", "Date · Coordinator name · Property · Resident dropdown"],
+              ["✝️", "Spiritual Growth", "Church attendance, Bible reading plan, prayer requests, other spiritual needs"],
+              ["🤝", "Weekly Participation", "Work schedule, therapy, classes (Jobs for Life / Faith & Finances / Mastering Debt), recovery meeting"],
+              ["🏠", "House Maintenance", "Cleanliness (Kitchen / Bathrooms / Floors), laundry, trash, repairs, meal prep concerns"],
+              ["📄", "Agreement Compliance", "Alcohol/drugs/nicotine, visitors policy, program fee ($300 by 1st), non-compliance issues"],
+              ["💰", "Financial Goals", "Employer, pay rate, checking/savings balances, income goals, setbacks"],
+              ["👶", "Single Parenting Concerns", "Only shown if resident has children — school attendance, behavioral support, childcare"],
+              ["🚗", "Transportation / DriveWise", "Oil change, car insurance, vehicle concerns"],
+              ["💬", "Other Concerns", "Any other concerns"],
+              ["🧪", "Monthly Tests (not required)", "Drug test and breathalyzer results"],
+            ].map(([icon, title, desc]) => (
+              <div key={title} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden" }}>
+                <div style={{ background: C.blue, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{icon}</span><span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>{title}</span>
+                </div>
+                <div style={{ padding: "12px 16px", fontSize: 14, color: C.muted }}>{desc}</div>
               </div>
-            </Card>
-            <Card title="Weekly Participation" icon="🤝">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Work schedule, attendance or concerns? (if Yes → notes)<br/>
-                • Attending therapy?<br/>
-                • Attending classes — Jobs for Life, Faith and Finances, Mastering Debt? (if Yes → class and mentor)<br/>
-                • Attending recovery meeting?
-              </div>
-            </Card>
-            <Card title="House Maintenance" icon="🏠">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Cleanliness — Kitchen / Bathrooms / Floors (Y/N each)<br/>
-                • Laundry?<br/>
-                • Trash removed and to curb?<br/>
-                • Repair or house concerns? (if Yes → notes)<br/>
-                • Meal prep / fast food concerns? (if Yes → notes)
-              </div>
-            </Card>
-            <Card title="Agreement Compliance" icon="📄">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Alcohol, drug and nicotine compliance?<br/>
-                • Discussed visitors policy?<br/>
-                • Program fee of $300 paid by 1st of month?<br/>
-                • Any non-compliance issues? (if Yes → notes)
-              </div>
-            </Card>
-            <Card title="Financial Goals" icon="💰">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Employer name · Pay rate<br/>
-                • Checking account balance · Savings account balance<br/>
-                • Reviewed income goals (3, 6, 9, 12 months)?<br/>
-                • Any setbacks? (if Yes → notes)
-              </div>
-            </Card>
-            <Card title="Single Parenting Concerns" icon="👶">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                <em>Only shown for residents with "Has Children" flagged</em><br/>
-                • School attendance concerns?<br/>
-                • Behavioral support needs?<br/>
-                • Childcare concerns? (if Yes → notes)
-              </div>
-            </Card>
-            <Card title="Transportation / DriveWise" icon="🚗">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                • Oil change needed?<br/>
-                • Car insurance up to date and paid?<br/>
-                • Other vehicle concerns? (if Yes → notes)
-              </div>
-            </Card>
-            <Card title="Any Other Concerns?" icon="💬">
-              <div style={{ fontSize: 14, color: C.muted }}>• Any other concerns? (if Yes → notes)</div>
-            </Card>
-            <Card title="Monthly Tests (if applicable)" icon="🧪">
-              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>
-                <em>Not required — complete only during testing months</em><br/>
-                • Drug test results<br/>
-                • Breathalyzer test results
-              </div>
-            </Card>
+            ))}
           </div>
         ) : !coordinatorRecord ? (
           <div style={{ maxWidth: 540, margin: "40px auto", padding: "0 14px", textAlign: "center" }}>
@@ -1072,11 +1142,16 @@ export default function App() {
           <CareForm coordinatorRecord={coordinatorRecord} properties={properties} />
         )
       )}
+
       {tab === "history" && (
-        <HistoryPage coordinatorRecord={coordinatorRecord} isAdmin={isAdmin} allCoordinators={coordinators} allProperties={properties} allResidents={residents} />
+        <HistoryPage coordinatorRecord={coordinatorRecord} adminRole={adminRole}
+          allCoordinators={coordinators} allProperties={properties} allResidents={residents} />
       )}
+
       {tab === "admin" && isAdmin && (
-        <AdminPage onBack={() => setTab("form")} allCoordinators={coordinators} allProperties={properties} allResidents={residents} allAdmins={admins} reload={loadData} />
+        <AdminPage onBack={() => setTab("history")} adminRole={adminRole}
+          allCoordinators={coordinators} allProperties={properties}
+          allResidents={residents} allAdmins={admins} reload={loadData} />
       )}
     </div>
   );
