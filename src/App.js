@@ -113,14 +113,16 @@ const ReadOnlyField = ({ label, value }) => (
 );
 
 // Airtable returns true for checked, undefined/null for unchecked (not false)
-// So we treat undefined/null as false when a value exists in the record
+// concern: "yes"=Yes is bad, "no"=No is bad, "yellow_yes"=Yes is informational gold,
+//          "yellow_no"=No is informational gold, "info"=neither right nor wrong (show light green for selected)
 const ReadOnlyYesNo = ({ label, value, concern, answered = true }) => {
-  // Normalize: Airtable sends undefined for unchecked checkboxes, true for checked
   const normalized = value === true ? true : (answered ? false : null);
 
   const getStyle = (btnVal) => {
     if (normalized === null) return { bg: C.white, border: C.border, color: C.muted };
     if (normalized !== btnVal) return { bg: C.white, border: C.border, color: C.muted };
+    // Information only — light green to show answer was recorded, no judgment
+    if (concern === "info") return { bg: "#DAF2D0", border: "#8BC34A", color: "#2d5a1b" };
     if (concern === "no" && normalized === false) return { bg: C.danger, border: C.danger, color: C.white };
     if (concern === "yes" && normalized === true) return { bg: C.danger, border: C.danger, color: C.white };
     if (concern === "yellow_yes" && normalized === true) return { bg: C.gold, border: C.gold, color: C.white };
@@ -369,10 +371,10 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                 <div style={{ padding: "14px 18px" }}>
                   <ReadOnlyYesNo label="Work schedule, attendance or concerns?" value={f["Work Schedule"]} concern="yes" />
                   {f["Work Concerns Notes"] && <ReadOnlyField label="Work Notes" value={f["Work Concerns Notes"]} />}
-                  <ReadOnlyYesNo label="Attending therapy?" value={f["Therapy Sessions"]} concern="no" />
+                  <ReadOnlyYesNo label="Attending therapy?" value={f["Therapy Sessions"]} concern="info" />
                   <ReadOnlyYesNo label="Attending classes?" value={f["Attending Classes"]} concern="no" />
                   {f["Current Class and Mentor"] && <ReadOnlyField label="Class & Mentor" value={f["Current Class and Mentor"]} />}
-                  <ReadOnlyYesNo label="Attending recovery meeting?" value={f["Attending Recovery Meeting"]} />
+                  <ReadOnlyYesNo label="Attending recovery meeting?" value={f["Attending Recovery Meeting"]} concern="info" />
                 </div>
 
                 {/* House Maintenance */}
