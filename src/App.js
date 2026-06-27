@@ -112,15 +112,30 @@ const ReadOnlyField = ({ label, value }) => (
   </div>
 );
 
-const ReadOnlyYesNo = ({ label, value }) => (
-  <div style={{ marginBottom: 12 }}>
-    <div style={{ fontSize: 14, color: C.text, marginBottom: 6, fontWeight: 500 }}>{label}</div>
-    <div style={{ display: "flex", gap: 10 }}>
-      <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${value === true ? C.green : C.border}`, background: value === true ? C.green : C.white, color: value === true ? C.white : C.muted, fontWeight: 700, fontSize: 14 }}>Yes</div>
-      <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${value === false ? C.danger : C.border}`, background: value === false ? C.danger : C.white, color: value === false ? C.white : C.muted, fontWeight: 700, fontSize: 14 }}>No</div>
+// concern: "yes" = Yes answer is bad/flagged, "no" = No answer is bad/flagged, "yellow_yes" = Yes is informational, null = neutral
+const ReadOnlyYesNo = ({ label, value, concern }) => {
+  const getColor = (btnVal) => {
+    if (value !== btnVal) return { bg: C.white, border: C.border, color: C.muted };
+    if (value === null || value === undefined) return { bg: C.white, border: C.border, color: C.muted };
+    if (concern === "no" && value === false) return { bg: C.danger, border: C.danger, color: C.white };
+    if (concern === "yes" && value === true) return { bg: C.danger, border: C.danger, color: C.white };
+    if (concern === "yellow_yes" && value === true) return { bg: "#c8952a", border: "#c8952a", color: C.white };
+    if (concern === "yellow_no" && value === false) return { bg: "#c8952a", border: "#c8952a", color: C.white };
+    // Desired answer — green
+    return { bg: C.green, border: C.green, color: C.white };
+  };
+  const yesStyle = getColor(true);
+  const noStyle = getColor(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 14, color: C.text, marginBottom: 6, fontWeight: 500 }}>{label}</div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${yesStyle.border}`, background: yesStyle.bg, color: yesStyle.color, fontWeight: 700, fontSize: 14 }}>Yes</div>
+        <div style={{ flex: 1, padding: "8px 0", borderRadius: 7, textAlign: "center", border: `2px solid ${noStyle.border}`, background: noStyle.bg, color: noStyle.color, fontWeight: 700, fontSize: 14 }}>No</div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Btn = ({ children, onClick, color = C.gold, disabled, full, small, outline, danger }) => {
   const bg = danger ? C.danger : color;
@@ -334,12 +349,12 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                   <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Spiritual Growth</span>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
-                  <ReadOnlyYesNo label="Church Attendance?" value={f["Church Attendance"]} />
+                  <ReadOnlyYesNo label="Church Attendance?" value={f["Church Attendance"]} concern="no" />
                   {f["Church Name"] && <ReadOnlyField label="Church Name" value={f["Church Name"]} />}
-                  <ReadOnlyYesNo label="Has a Bible reading plan?" value={f["Bible Reading Plan"]} />
-                  <ReadOnlyYesNo label="Prayer requests?" value={f["Prayer Requests"]} />
+                  <ReadOnlyYesNo label="Has a Bible reading plan?" value={f["Bible Reading Plan"]} concern="no" />
+                  <ReadOnlyYesNo label="Prayer requests?" value={f["Prayer Requests"]} concern="yellow_yes" />
                   {f["Prayer Request Notes"] && <ReadOnlyField label="Prayer Request Details" value={f["Prayer Request Notes"]} />}
-                  <ReadOnlyYesNo label="Other spiritual growth needs?" value={f["Spiritual Growth Notes"] ? true : (f["Spiritual Growth Notes"] === "" ? false : null)} />
+                  <ReadOnlyYesNo label="Other spiritual growth needs?" value={f["Spiritual Growth Notes"] ? true : (f["Spiritual Growth Notes"] === "" ? false : null)} concern="yellow_yes" />
                   {f["Spiritual Growth Notes"] && <ReadOnlyField label="Spiritual Growth Notes" value={f["Spiritual Growth Notes"]} />}
                 </div>
 
@@ -349,10 +364,10 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                   <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Weekly Participation</span>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
-                  <ReadOnlyYesNo label="Work schedule, attendance or concerns?" value={f["Work Schedule"]} />
+                  <ReadOnlyYesNo label="Work schedule, attendance or concerns?" value={f["Work Schedule"]} concern="yes" />
                   {f["Work Concerns Notes"] && <ReadOnlyField label="Work Notes" value={f["Work Concerns Notes"]} />}
-                  <ReadOnlyYesNo label="Attending therapy?" value={f["Therapy Sessions"]} />
-                  <ReadOnlyYesNo label="Attending classes?" value={f["Attending Classes"]} />
+                  <ReadOnlyYesNo label="Attending therapy?" value={f["Therapy Sessions"]} concern="no" />
+                  <ReadOnlyYesNo label="Attending classes?" value={f["Attending Classes"]} concern="no" />
                   {f["Current Class and Mentor"] && <ReadOnlyField label="Class & Mentor" value={f["Current Class and Mentor"]} />}
                   <ReadOnlyYesNo label="Attending recovery meeting?" value={f["Attending Recovery Meeting"]} />
                 </div>
@@ -379,11 +394,11 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                       </div>
                     </div>
                   </div>
-                  <ReadOnlyYesNo label="Laundry?" value={f["Laundry"]} />
-                  <ReadOnlyYesNo label="Trash removed and to curb?" value={f["Trash Removed"]} />
-                  <ReadOnlyYesNo label="Repair or house concerns?" value={f["Repairs Needed"]} />
+                  <ReadOnlyYesNo label="Laundry?" value={f["Laundry"]} concern="no" />
+                  <ReadOnlyYesNo label="Trash removed and to curb?" value={f["Trash Removed"]} concern="no" />
+                  <ReadOnlyYesNo label="Repair or house concerns?" value={f["Repairs Needed"]} concern="yellow_yes" />
                   {f["Repair Notes"] && <ReadOnlyField label="Repair Notes" value={f["Repair Notes"]} />}
-                  <ReadOnlyYesNo label="Meal prep / fast food concerns?" value={f["Meal Prep Concerns"]} />
+                  <ReadOnlyYesNo label="Meal prep / fast food concerns?" value={f["Meal Prep Concerns"]} concern="yes" />
                   {f["Meal Prep Notes"] && <ReadOnlyField label="Meal Prep Notes" value={f["Meal Prep Notes"]} />}
                 </div>
 
@@ -393,10 +408,10 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                   <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Agreement Compliance</span>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
-                  <ReadOnlyYesNo label="Alcohol, drug and nicotine compliance?" value={f["Alcohol Drugs Nicotine"]} />
-                  <ReadOnlyYesNo label="Discussed visitors policy?" value={f["Visitors Policy Discussed"]} />
-                  <ReadOnlyYesNo label="Program fee of $300 paid by 1st of month?" value={f["Program Fee Paid"]} />
-                  <ReadOnlyYesNo label="Any non-compliance issues?" value={f["Non Compliance Notes"] ? true : null} />
+                  <ReadOnlyYesNo label="Alcohol, drug and nicotine compliance?" value={f["Alcohol Drugs Nicotine"]} concern="no" />
+                  <ReadOnlyYesNo label="Discussed visitors policy?" value={f["Visitors Policy Discussed"]} concern="no" />
+                  <ReadOnlyYesNo label="Program fee of $300 paid by 1st of month?" value={f["Program Fee Paid"]} concern="no" />
+                  <ReadOnlyYesNo label="Any non-compliance issues?" value={f["Non Compliance Notes"] ? true : null} concern="yes" />
                   {f["Non Compliance Notes"] && <ReadOnlyField label="Non-Compliance Notes" value={f["Non Compliance Notes"]} />}
                 </div>
 
@@ -412,8 +427,8 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                     <ReadOnlyField label="Checking Balance" value={f["Checking Balance"]} />
                     <ReadOnlyField label="Savings Balance" value={f["Savings Balance"]} />
                   </div>
-                  <ReadOnlyYesNo label="Reviewed income goals?" value={f["Income Goals Reviewed"]} />
-                  <ReadOnlyYesNo label="Any setbacks?" value={f["Financial Setbacks"]} />
+                  <ReadOnlyYesNo label="Reviewed income goals?" value={f["Income Goals Reviewed"]} concern="no" />
+                  <ReadOnlyYesNo label="Any setbacks?" value={f["Financial Setbacks"]} concern="yes" />
                   {f["Financial Setback Notes"] && <ReadOnlyField label="Setback Notes" value={f["Financial Setback Notes"]} />}
                 </div>
 
@@ -425,9 +440,9 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                       <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Single Parenting Concerns</span>
                     </div>
                     <div style={{ padding: "14px 18px" }}>
-                      <ReadOnlyYesNo label="School attendance concerns?" value={f["School Attendance"]} />
-                      <ReadOnlyYesNo label="Behavioral support needs?" value={f["Behavioral Support Needs"]} />
-                      <ReadOnlyYesNo label="Childcare concerns?" value={f["Childcare Concerns"]} />
+                      <ReadOnlyYesNo label="School attendance concerns?" value={f["School Attendance"]} concern="yes" />
+                      <ReadOnlyYesNo label="Behavioral support needs?" value={f["Behavioral Support Needs"]} concern="yes" />
+                      <ReadOnlyYesNo label="Childcare concerns?" value={f["Childcare Concerns"]} concern="yes" />
                       {f["Childcare Notes"] && <ReadOnlyField label="Childcare Notes" value={f["Childcare Notes"]} />}
                     </div>
                   </>
@@ -439,9 +454,9 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                   <span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>Transportation / DriveWise</span>
                 </div>
                 <div style={{ padding: "14px 18px" }}>
-                  <ReadOnlyYesNo label="Oil change needed?" value={f["Oil Change Needed"]} />
-                  <ReadOnlyYesNo label="Car insurance up to date and paid?" value={f["Car Insurance Current"]} />
-                  <ReadOnlyYesNo label="Other vehicle concerns?" value={f["Vehicle Concerns"]} />
+                  <ReadOnlyYesNo label="Oil change needed?" value={f["Oil Change Needed"]} concern="yellow_yes" />
+                  <ReadOnlyYesNo label="Car insurance up to date and paid?" value={f["Car Insurance Current"]} concern="no" />
+                  <ReadOnlyYesNo label="Other vehicle concerns?" value={f["Vehicle Concerns"]} concern="yellow_yes" />
                   {f["Vehicle Notes"] && <ReadOnlyField label="Vehicle Notes" value={f["Vehicle Notes"]} />}
                 </div>
 
@@ -730,6 +745,7 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   const [saving, setSaving] = useState(false);
   const [newCoord, setNewCoord] = useState({ name: "", propertyId: "", phone: "", email: "", password: "" });
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
+  const [editingResident, setEditingResident] = useState(null); // { id, name, propertyId, moveIn, hasChildren }
   const [newProperty, setNewProperty] = useState({ name: "", gender: "" });
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
@@ -796,6 +812,17 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
       setNewResident({ name: "", propertyId: "", moveIn: "", hasChildren: false });
       flash("Resident added."); await reload();
     } catch (e) { setError("Could not add resident."); }
+    setSaving(false);
+  };
+
+  const saveEditResident = async () => {
+    if (!editingResident.name || !editingResident.propertyId) { setError("Name and property are required."); return; }
+    setSaving(true); setError("");
+    try {
+      await atFetch("Residents", "PATCH", { records: [{ id: editingResident.id, fields: { Name: editingResident.name, Property: [editingResident.propertyId], "Move In Date": editingResident.moveIn || null, "Has Children": editingResident.hasChildren } }] });
+      setEditingResident(null);
+      flash("Resident updated."); await reload();
+    } catch (e) { setError("Could not update resident."); }
     setSaving(false);
   };
 
@@ -934,20 +961,41 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
             {visibleResidents.length === 0 ? (
               <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No residents yet.</div>
             ) : visibleResidents.map(r => (
-              <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{r.fields.Name}
-                    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: r.fields.Status === "Active" ? "#d4edda" : "#f8d7da", color: r.fields.Status === "Active" ? C.green : C.danger }}>{r.fields.Status || "Active"}</span>
-                    {r.fields["Has Children"] && <span style={{ marginLeft: 6, fontSize: 11 }}>👶</span>}
+              <div key={r.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                {editingResident?.id === r.id ? (
+                  // Inline edit form
+                  <div style={{ padding: "12px 0" }}>
+                    <div style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginBottom: 10 }}>Editing: {r.fields.Name}</div>
+                    <Input label="Full Name" value={editingResident.name} onChange={v => setEditingResident(p => ({ ...p, name: v }))} placeholder="Resident's full name" required />
+                    <SelectField label="Property" value={editingResident.propertyId} onChange={v => setEditingResident(p => ({ ...p, propertyId: v }))} options={propOptions} placeholder="Select property…" required />
+                    <Input label="Move In Date" value={editingResident.moveIn} onChange={v => setEditingResident(p => ({ ...p, moveIn: v }))} type="date" />
+                    <CheckItem label="Has Children" checked={editingResident.hasChildren} onChange={() => setEditingResident(p => ({ ...p, hasChildren: !p.hasChildren }))} />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Btn small onClick={saveEditResident} disabled={saving} color={C.green}>{saving ? "Saving…" : "Save Changes"}</Btn>
+                      <Btn small outline color={C.muted} onClick={() => setEditingResident(null)}>Cancel</Btn>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 13, color: C.muted }}>{r.fields.Property ? propName(r.fields.Property[0]) : "No property"}{r.fields["Move In Date"] ? ` · Moved in ${r.fields["Move In Date"]}` : ""}</div>
-                </div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {r.fields.Status === "Active"
-                    ? <Btn small outline color={C.muted} onClick={() => updateResidentStatus(r.id, "Transitioned Out")} disabled={saving}>Transition Out</Btn>
-                    : <Btn small outline color={C.green} onClick={() => updateResidentStatus(r.id, "Active")} disabled={saving}>Reactivate</Btn>}
-                  <Btn small danger onClick={() => deleteResident(r.id)} disabled={saving}>Remove</Btn>
-                </div>
+                ) : (
+                  // Normal row
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{r.fields.Name}
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 10, background: r.fields.Status === "Active" ? "#d4edda" : "#f8d7da", color: r.fields.Status === "Active" ? C.green : C.danger }}>{r.fields.Status || "Active"}</span>
+                        {r.fields["Has Children"] && <span style={{ marginLeft: 6, fontSize: 11 }}>👶</span>}
+                      </div>
+                      <div style={{ fontSize: 13, color: C.muted }}>{r.fields.Property ? propName(r.fields.Property[0]) : "No property"}{r.fields["Move In Date"] ? ` · Moved in ${r.fields["Move In Date"]}` : ""}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {r.fields.Status === "Active" && (
+                        <Btn small outline color={C.blue} onClick={() => setEditingResident({ id: r.id, name: r.fields.Name, propertyId: r.fields.Property?.[0] || "", moveIn: r.fields["Move In Date"] || "", hasChildren: r.fields["Has Children"] || false })} disabled={saving}>Edit</Btn>
+                      )}
+                      {r.fields.Status === "Active"
+                        ? <Btn small outline color={C.muted} onClick={() => updateResidentStatus(r.id, "Transitioned Out")} disabled={saving}>Transition Out</Btn>
+                        : <Btn small outline color={C.green} onClick={() => updateResidentStatus(r.id, "Active")} disabled={saving}>Reactivate</Btn>}
+                      <Btn small danger onClick={() => deleteResident(r.id)} disabled={saving}>Remove</Btn>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </Card>
