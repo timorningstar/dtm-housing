@@ -112,18 +112,19 @@ const ReadOnlyField = ({ label, value }) => (
   </div>
 );
 
-// concern: "yes" = Yes is bad, "no" = No is bad, "yellow_yes" = Yes is informational, "yellow_no" = No is informational, null/undefined = neutral (show green for whichever was selected)
-const ReadOnlyYesNo = ({ label, value, concern }) => {
+// Airtable returns true for checked, undefined/null for unchecked (not false)
+// So we treat undefined/null as false when a value exists in the record
+const ReadOnlyYesNo = ({ label, value, concern, answered = true }) => {
+  // Normalize: Airtable sends undefined for unchecked checkboxes, true for checked
+  const normalized = value === true ? true : (answered ? false : null);
+
   const getStyle = (btnVal) => {
-    // Not selected — always neutral
-    if (value !== btnVal) return { bg: C.white, border: C.border, color: C.muted };
-    // Selected — determine color
-    if (value === null || value === undefined) return { bg: C.white, border: C.border, color: C.muted };
-    if (concern === "no" && value === false) return { bg: C.danger, border: C.danger, color: C.white };
-    if (concern === "yes" && value === true) return { bg: C.danger, border: C.danger, color: C.white };
-    if (concern === "yellow_yes" && value === true) return { bg: C.gold, border: C.gold, color: C.white };
-    if (concern === "yellow_no" && value === false) return { bg: C.gold, border: C.gold, color: C.white };
-    // All other selected answers = green (desired answer, or neutral)
+    if (normalized === null) return { bg: C.white, border: C.border, color: C.muted };
+    if (normalized !== btnVal) return { bg: C.white, border: C.border, color: C.muted };
+    if (concern === "no" && normalized === false) return { bg: C.danger, border: C.danger, color: C.white };
+    if (concern === "yes" && normalized === true) return { bg: C.danger, border: C.danger, color: C.white };
+    if (concern === "yellow_yes" && normalized === true) return { bg: C.gold, border: C.gold, color: C.white };
+    if (concern === "yellow_no" && normalized === false) return { bg: C.gold, border: C.gold, color: C.white };
     return { bg: C.green, border: C.green, color: C.white };
   };
   const yesStyle = getStyle(true);
@@ -385,14 +386,18 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
                     <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "12px", background: C.light }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                         {[["Kitchen Clean", "Kitchen"], ["Bathrooms Clean", "Bathrooms"], ["Floors Clean", "Floors"]].map(([k, l]) => (
-                          <div key={k}>
-                            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600, textAlign: "center" }}>{l}</div>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${f[k] === true ? C.green : C.border}`, background: f[k] === true ? C.green : C.white, color: f[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>Y</div>
-                              <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${f[k] === false ? C.danger : C.border}`, background: f[k] === false ? C.danger : C.white, color: f[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>N</div>
-                            </div>
-                          </div>
-                        ))}
+                        {[["Kitchen Clean", "Kitchen"], ["Bathrooms Clean", "Bathrooms"], ["Floors Clean", "Floors"]].map(([k, l]) => {
+                            const val = f[k] === true ? true : false;
+                            return (
+                              <div key={k}>
+                                <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600, textAlign: "center" }}>{l}</div>
+                                <div style={{ display: "flex", gap: 4 }}>
+                                  <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${val === true ? C.green : C.border}`, background: val === true ? C.green : C.white, color: val === true ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>Y</div>
+                                  <div style={{ flex: 1, padding: "6px 0", borderRadius: 6, textAlign: "center", border: `2px solid ${val === false ? C.danger : C.border}`, background: val === false ? C.danger : C.white, color: val === false ? C.white : C.muted, fontWeight: 700, fontSize: 13 }}>N</div>
+                                </div>
+                              </div>
+                            );
+                          })}
                       </div>
                     </div>
                   </div>
