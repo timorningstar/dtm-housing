@@ -755,6 +755,7 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
   const [editingResident, setEditingResident] = useState(null); // { id, name, propertyId, moveIn, hasChildren }
   const [newProperty, setNewProperty] = useState({ name: "", gender: "" });
+  const [editingProperty, setEditingProperty] = useState(null); // { id, name, gender }
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminRole, setNewAdminRole] = useState("");
@@ -858,6 +859,35 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
       await atFetch("Properties", "POST", { records: [{ fields: { Name: newProperty.name, Status: "Active", Gender: gender } }] });
       setNewProperty({ name: "", gender: "" }); flash("Property added."); await reload();
     } catch (e) { setError("Could not add property."); }
+    setSaving(false);
+  };
+
+  const saveEditProperty = async () => {
+    if (!editingProperty.name) { setError("Property name is required."); return; }
+    setSaving(true); setError("");
+    try {
+      await atFetch("Properties", "PATCH", { records: [{ id: editingProperty.id, fields: { Name: editingProperty.name, Gender: editingProperty.gender } }] });
+      setEditingProperty(null); flash("Property updated."); await reload();
+    } catch (e) { setError("Could not update property."); }
+    setSaving(false);
+  };
+
+  const deleteProperty = async (id, name) => {
+    if (!window.confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+    setSaving(true); setError("");
+    try {
+      // Check for visit history linked to this property via coordinators
+      const coords = allCoordinators.filter(c => (c.fields?.Properties || []).includes(id));
+      const coordIds = coords.map(c => c.id);
+      const visits = await fetchAll("Visit Reports");
+      const hasHistory = visits.some(v => (v.fields?.Coordinator || []).some(cid => coordIds.includes(cid)));
+      if (hasHistory) {
+        setError(`Cannot delete "${name}" — it has visit report history. Archive it instead to hide it from the form while preserving history.`);
+        setSaving(false); return;
+      }
+      await atFetch("Properties", "DELETE", null, id);
+      flash("Property deleted."); await reload();
+    } catch (e) { setError("Could not delete property."); }
     setSaving(false);
   };
 
@@ -1021,12 +1051,34 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
           </Card>
           <Card title={`Active Properties (${activeProperties.length})`} icon="📍">
             {activeProperties.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: C.text }}>🏠 {p.fields.Name}</div>
-                  {isED && <div style={{ fontSize: 12, color: C.muted }}>{p.fields.Gender || "No category set"}</div>}
-                </div>
-                <Btn small outline color={C.muted} onClick={() => archiveProperty(p.id)} disabled={saving}>Archive</Btn>
+              <div key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                {editingProperty?.id === p.id ? (
+                  <div style={{ padding: "12px 0" }}>
+                    <div style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginBottom: 10 }}>Editing: {p.fields.Name}</div>
+                    <Input label="Property Name" value={editingProperty.name} onChange={v => setEditingProperty(prev => ({ ...prev, name: v }))} placeholder="Property name" required />
+                    {isED && (
+                      <SelectField label="Gender Category" value={editingProperty.gender} onChange={v => setEditingProperty(prev => ({ ...prev, gender: v }))}
+                        options={[{ value: GENDERS.WOMENS, label: GENDERS.WOMENS }, { value: GENDERS.MENS, label: GENDERS.MENS }]}
+                        placeholder="Select category…" />
+                    )}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Btn small onClick={saveEditProperty} disabled={saving} color={C.green}>{saving ? "Saving…" : "Save"}</Btn>
+                      <Btn small outline color={C.muted} onClick={() => setEditingProperty(null)}>Cancel</Btn>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: C.text }}>🏠 {p.fields.Name}</div>
+                      {isED && <div style={{ fontSize: 12, color: C.muted }}>{p.fields.Gender || "No category set"}</div>}
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <Btn small outline color={C.blue} onClick={() => setEditingProperty({ id: p.id, name: p.fields.Name, gender: p.fields.Gender || "" })} disabled={saving}>Edit</Btn>
+                      <Btn small outline color={C.muted} onClick={() => archiveProperty(p.id)} disabled={saving}>Archive</Btn>
+                      <Btn small danger onClick={() => deleteProperty(p.id, p.fields.Name)} disabled={saving}>Delete</Btn>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </Card>
