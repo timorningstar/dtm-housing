@@ -112,20 +112,22 @@ const ReadOnlyField = ({ label, value }) => (
   </div>
 );
 
-// concern: "yes" = Yes answer is bad/flagged, "no" = No answer is bad/flagged, "yellow_yes" = Yes is informational, null = neutral
+// concern: "yes" = Yes is bad, "no" = No is bad, "yellow_yes" = Yes is informational, "yellow_no" = No is informational, null/undefined = neutral (show green for whichever was selected)
 const ReadOnlyYesNo = ({ label, value, concern }) => {
-  const getColor = (btnVal) => {
+  const getStyle = (btnVal) => {
+    // Not selected — always neutral
     if (value !== btnVal) return { bg: C.white, border: C.border, color: C.muted };
+    // Selected — determine color
     if (value === null || value === undefined) return { bg: C.white, border: C.border, color: C.muted };
     if (concern === "no" && value === false) return { bg: C.danger, border: C.danger, color: C.white };
     if (concern === "yes" && value === true) return { bg: C.danger, border: C.danger, color: C.white };
-    if (concern === "yellow_yes" && value === true) return { bg: "#c8952a", border: "#c8952a", color: C.white };
-    if (concern === "yellow_no" && value === false) return { bg: "#c8952a", border: "#c8952a", color: C.white };
-    // Desired answer — green
+    if (concern === "yellow_yes" && value === true) return { bg: C.gold, border: C.gold, color: C.white };
+    if (concern === "yellow_no" && value === false) return { bg: C.gold, border: C.gold, color: C.white };
+    // All other selected answers = green (desired answer, or neutral)
     return { bg: C.green, border: C.green, color: C.white };
   };
-  const yesStyle = getColor(true);
-  const noStyle = getColor(false);
+  const yesStyle = getStyle(true);
+  const noStyle = getStyle(false);
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: 14, color: C.text, marginBottom: 6, fontWeight: 500 }}>{label}</div>
