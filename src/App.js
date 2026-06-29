@@ -1096,7 +1096,6 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
                         <Btn small outline color={C.blue} onClick={() => setEditingCoord({ id: c.id, name: c.fields.Name, propertyIds: c.fields.Properties || [], residentIds: c.fields.Residents || [], phone: c.fields.Phone || "" })} disabled={saving}>Edit</Btn>
                         {c.fields.Email && <Btn small outline color={C.blue} onClick={() => resetPassword(c.fields.Email)} disabled={saving}>Reset PW</Btn>}
                         <Btn small outline color={C.muted} onClick={() => deactivateCoordinator(c.id)} disabled={saving}>Deactivate</Btn>
-                        <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Delete</Btn>
                       </div>
                     </div>
                   </div>
@@ -1116,7 +1115,6 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     <Btn small outline color={C.green} onClick={() => reinstateCoordinator(c.id)} disabled={saving}>Reinstate</Btn>
-                    <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Delete</Btn>
                   </div>
                 </div>
               ))}
