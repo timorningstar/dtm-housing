@@ -70,6 +70,28 @@ const SelectField = ({ label, value, onChange, options, placeholder, required })
   </div>
 );
 
+const MultiCheck = ({ label, options, selected, onChange, required }) => {
+  const toggle = (id) => {
+    const next = selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id];
+    onChange(next);
+  };
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {label && <div style={{ fontSize: 13, color: C.muted, marginBottom: 6, fontWeight: 600 }}>{label}{required && <span style={{ color: C.danger }}> *</span>}</div>}
+      <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 7, background: C.light, padding: "8px 12px", maxHeight: 160, overflowY: "auto" }}>
+        {options.length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>No options available</div> : options.map(o => (
+          <label key={o.value} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0", cursor: "pointer" }}>
+            <div onClick={() => toggle(o.value)} style={{ width: 18, height: 18, minWidth: 18, border: `2px solid ${selected.includes(o.value) ? C.gold : C.border}`, borderRadius: 3, background: selected.includes(o.value) ? C.gold : C.white, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              {selected.includes(o.value) && <svg width="10" height="8" viewBox="0 0 13 10" fill="none"><path d="M1.5 5L5 8.5L11.5 1.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            </div>
+            <span style={{ fontSize: 14, color: C.text }}>{o.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const CheckItem = ({ label, checked, onChange, children }) => (
   <div style={{ marginBottom: 10 }}>
     <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
@@ -533,15 +555,24 @@ function CareForm({ coordinatorRecord, properties }) {
   const [error, setError] = useState("");
 
   const coordPropertyIds = coordinatorRecord?.fields?.Properties || [];
+  const coordResidentIds = coordinatorRecord?.fields?.Residents || [];
   const coordPropId = coordPropertyIds[0];
-  const propertyName = coordPropId ? (properties.find(p => p.id === coordPropId)?.fields?.Name || "") : "";
+  const propertyNames = coordPropertyIds.map(id => properties.find(p => p.id === id)?.fields?.Name).filter(Boolean).join(", ");
+  const propertyName = propertyNames;
 
   useEffect(() => {
     (async () => {
       try {
         const resis = await fetchAll("Residents");
-        const active = resis.filter(r => r.fields?.Name && r.fields?.Status === "Active"
-          && (r.fields?.Property || []).some(id => coordPropertyIds.includes(id)));
+        let active;
+        if (coordResidentIds.length > 0) {
+          // Filter to specifically assigned residents only
+          active = resis.filter(r => r.fields?.Name && r.fields?.Status === "Active" && coordResidentIds.includes(r.id));
+        } else {
+          // Fallback: show all active residents at coordinator's properties
+          active = resis.filter(r => r.fields?.Name && r.fields?.Status === "Active"
+            && (r.fields?.Property || []).some(id => coordPropertyIds.includes(id)));
+        }
         setResidents(active);
       } catch (e) { setError("Could not load residents."); }
       setLoading(false);
@@ -751,7 +782,8 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
-  const [newCoord, setNewCoord] = useState({ name: "", propertyId: "", phone: "", email: "", password: "" });
+  const [newCoord, setNewCoord] = useState({ name: "", propertyIds: [], residentIds: [], phone: "", email: "", password: "" });
+  const [editingCoord, setEditingCoord] = useState(null);
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
   const [editingResident, setEditingResident] = useState(null); // { id, name, propertyId, moveIn, hasChildren }
   const [newProperty, setNewProperty] = useState({ name: "", gender: "" });
@@ -787,16 +819,27 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   });
 
   const addCoordinator = async () => {
-    if (!newCoord.name || !newCoord.propertyId || !newCoord.email || !newCoord.password) { setError("All fields are required."); return; }
+    if (!newCoord.name || newCoord.propertyIds.length === 0 || !newCoord.email || !newCoord.password) { setError("Name, at least one property, email and password are all required."); return; }
     setSaving(true); setError("");
     try {
       await createUserWithEmailAndPassword(auth, newCoord.email, newCoord.password);
-      await atFetch("Coordinators", "POST", { records: [{ fields: { Name: newCoord.name, Properties: [newCoord.propertyId], Phone: newCoord.phone, Email: newCoord.email } }] });
-      setNewCoord({ name: "", propertyId: "", phone: "", email: "", password: "" });
+      await atFetch("Coordinators", "POST", { records: [{ fields: { Name: newCoord.name, Properties: newCoord.propertyIds, Residents: newCoord.residentIds.length > 0 ? newCoord.residentIds : undefined, Phone: newCoord.phone, Email: newCoord.email } }] });
+      setNewCoord({ name: "", propertyIds: [], residentIds: [], phone: "", email: "", password: "" });
       flash("Coordinator added and login created!"); await reload();
     } catch (e) {
       setError(e.code === "auth/email-already-in-use" ? "That email already has a login." : "Could not add coordinator: " + e.message);
     }
+    setSaving(false);
+  };
+
+  const saveEditCoord = async () => {
+    if (!editingCoord.name || editingCoord.propertyIds.length === 0) { setError("Name and at least one property are required."); return; }
+    setSaving(true); setError("");
+    try {
+      await atFetch("Coordinators", "PATCH", { records: [{ id: editingCoord.id, fields: { Name: editingCoord.name, Properties: editingCoord.propertyIds, Residents: editingCoord.residentIds.length > 0 ? editingCoord.residentIds : undefined, Phone: editingCoord.phone } }] });
+      setEditingCoord(null);
+      flash("Coordinator updated."); await reload();
+    } catch (e) { setError("Could not update coordinator."); }
     setSaving(false);
   };
 
@@ -960,28 +1003,62 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
         <>
           <Card title="Add New Coordinator" icon="➕">
             <Input label="Full Name" value={newCoord.name} onChange={v => setNewCoord(p => ({ ...p, name: v }))} placeholder="Coordinator's full name" required />
-            <SelectField label="Assigned Property" value={newCoord.propertyId} onChange={v => setNewCoord(p => ({ ...p, propertyId: v }))} options={propOptions} placeholder="Select property…" required />
+            <MultiCheck label="Assigned Properties" options={propOptions} selected={newCoord.propertyIds} onChange={v => setNewCoord(p => ({ ...p, propertyIds: v, residentIds: [] }))} required />
+            {newCoord.propertyIds.length > 0 && (
+              <MultiCheck label="Assigned Residents (leave blank to show all residents at selected properties)"
+                options={visibleResidents.filter(r => r.fields.Status === "Active" && (r.fields?.Property || []).some(id => newCoord.propertyIds.includes(id))).map(r => ({ value: r.id, label: r.fields.Name + " · " + (propName(r.fields?.Property?.[0]) || "") }))}
+                selected={newCoord.residentIds} onChange={v => setNewCoord(p => ({ ...p, residentIds: v }))} />
+            )}
             <Input label="Phone Number" value={newCoord.phone} onChange={v => setNewCoord(p => ({ ...p, phone: v }))} placeholder="(555) 000-0000" />
             <Input label="Email Address (login)" value={newCoord.email} onChange={v => setNewCoord(p => ({ ...p, email: v }))} type="email" placeholder="coordinator@email.com" required />
             <Input label="Temporary Password" value={newCoord.password} onChange={v => setNewCoord(p => ({ ...p, password: v }))} type="password" placeholder="Minimum 6 characters" required />
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>The coordinator will use this email and password to log in. They can reset their password anytime.</div>
             <Btn onClick={addCoordinator} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Coordinator & Create Login"}</Btn>
           </Card>
           <Card title={`Coordinators (${visibleCoordinators.length})`} icon="👤">
             {visibleCoordinators.length === 0 ? (
               <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No coordinators yet.</div>
             ) : visibleCoordinators.map(c => (
-              <div key={c.id} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{c.fields.Name}</div>
-                    <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Properties ? propName(c.fields.Properties[0]) : "No property"}{c.fields.Phone ? ` · ${c.fields.Phone}` : ""}</div>
-                    <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Email || "No email"}</div>
+              <div key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                {editingCoord?.id === c.id ? (
+                  <div style={{ padding: "12px 0" }}>
+                    <div style={{ fontSize: 13, color: C.blue, fontWeight: 700, marginBottom: 10 }}>Editing: {c.fields.Name}</div>
+                    <Input label="Full Name" value={editingCoord.name} onChange={v => setEditingCoord(p => ({ ...p, name: v }))} placeholder="Full name" required />
+                    <MultiCheck label="Assigned Properties" options={propOptions} selected={editingCoord.propertyIds} onChange={v => setEditingCoord(p => ({ ...p, propertyIds: v, residentIds: [] }))} required />
+                    {editingCoord.propertyIds.length > 0 && (
+                      <MultiCheck label="Assigned Residents (leave blank for all residents at selected properties)"
+                        options={visibleResidents.filter(r => r.fields.Status === "Active" && (r.fields?.Property || []).some(id => editingCoord.propertyIds.includes(id))).map(r => ({ value: r.id, label: r.fields.Name + " · " + (propName(r.fields?.Property?.[0]) || "") }))}
+                        selected={editingCoord.residentIds} onChange={v => setEditingCoord(p => ({ ...p, residentIds: v }))} />
+                    )}
+                    <Input label="Phone Number" value={editingCoord.phone} onChange={v => setEditingCoord(p => ({ ...p, phone: v }))} placeholder="(555) 000-0000" />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Btn small onClick={saveEditCoord} disabled={saving} color={C.green}>{saving ? "Saving…" : "Save Changes"}</Btn>
+                      <Btn small outline color={C.muted} onClick={() => setEditingCoord(null)}>Cancel</Btn>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {c.fields.Email && <Btn small outline color={C.blue} onClick={() => resetPassword(c.fields.Email)} disabled={saving}>Reset PW</Btn>}
-                    <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Remove</Btn>
+                ) : (
+                  <div style={{ padding: "12px 0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{c.fields.Name}</div>
+                        <div style={{ fontSize: 13, color: C.muted }}>
+                          {(c.fields.Properties || []).map(id => propName(id)).join(", ") || "No property"}{c.fields.Phone ? ` · ${c.fields.Phone}` : ""}
+                        </div>
+                        {(c.fields.Residents || []).length > 0 && (
+                          <div style={{ fontSize: 12, color: C.blue }}>
+                            👤 Assigned: {(c.fields.Residents || []).map(id => allResidents.find(r => r.id === id)?.fields?.Name || "").filter(Boolean).join(", ")}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Email || "No email"}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <Btn small outline color={C.blue} onClick={() => setEditingCoord({ id: c.id, name: c.fields.Name, propertyIds: c.fields.Properties || [], residentIds: c.fields.Residents || [], phone: c.fields.Phone || "" })} disabled={saving}>Edit</Btn>
+                        {c.fields.Email && <Btn small outline color={C.blue} onClick={() => resetPassword(c.fields.Email)} disabled={saving}>Reset PW</Btn>}
+                        <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Remove</Btn>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </Card>
