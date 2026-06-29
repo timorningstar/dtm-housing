@@ -784,6 +784,7 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   const [saving, setSaving] = useState(false);
   const [newCoord, setNewCoord] = useState({ name: "", propertyIds: [], residentIds: [], phone: "", email: "", password: "" });
   const [editingCoord, setEditingCoord] = useState(null);
+  const [showInactiveCoords, setShowInactiveCoords] = useState(false);
   const [newResident, setNewResident] = useState({ name: "", propertyId: "", moveIn: "", hasChildren: false });
   const [editingResident, setEditingResident] = useState(null); // { id, name, propertyId, moveIn, hasChildren }
   const [newProperty, setNewProperty] = useState({ name: "", gender: "" });
@@ -1040,7 +1041,22 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>The coordinator will use this email and password to log in. They can reset their password anytime.</div>
             <Btn onClick={addCoordinator} disabled={saving} color={C.green}>{saving ? "Saving…" : "Add Coordinator & Create Login"}</Btn>
           </Card>
-          <Card title={`Coordinators (${visibleCoordinators.length})`} icon="👤">
+          <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 18, overflow: "hidden", boxShadow: "0 1px 4px rgba(26,58,92,0.07)" }}>
+            <div style={{ background: C.blue, padding: "12px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>👤</span>
+                <span style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>Coordinators ({visibleCoordinators.length} active)</span>
+              </div>
+              {inactiveCoordinators.length > 0 && (
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <div onClick={() => setShowInactiveCoords(v => !v)} style={{ width: 16, height: 16, border: `2px solid ${showInactiveCoords ? C.gold : "rgba(255,255,255,0.4)"}`, borderRadius: 3, background: showInactiveCoords ? C.gold : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    {showInactiveCoords && <svg width="9" height="7" viewBox="0 0 13 10" fill="none"><path d="M1.5 5L5 8.5L11.5 1.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                  </div>
+                  <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>Show deactivated ({inactiveCoordinators.length})</span>
+                </label>
+              )}
+            </div>
+            <div style={{ padding: "16px 18px" }}>
             {visibleCoordinators.length === 0 ? (
               <div style={{ color: C.muted, textAlign: "center", padding: "20px 0" }}>No coordinators yet.</div>
             ) : visibleCoordinators.map(c => (
@@ -1087,10 +1103,10 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
                 )}
               </div>
             ))}
-          </Card>
-          {inactiveCoordinators.length > 0 && (
-            <Card title={`Deactivated Coordinators (${inactiveCoordinators.length})`} icon="🔒">
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>These coordinators cannot log in or submit forms. Reinstate to restore full access.</div>
+          {showInactiveCoords && inactiveCoordinators.length > 0 && (
+            <div style={{ marginTop: 16, borderTop: `2px dashed ${C.border}`, paddingTop: 14 }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 10, fontWeight: 600 }}>🔒 Deactivated Coordinators</div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>These coordinators cannot log in or submit forms. Reinstate to restore full access.</div>
               {inactiveCoordinators.map(c => (
                 <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
                   <div>
@@ -1104,8 +1120,10 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
                   </div>
                 </div>
               ))}
-            </Card>
+            </div>
           )}
+            </div>
+          </div>
         </>
       ) : tab === "residents" ? (
         <>
