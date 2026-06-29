@@ -805,11 +805,13 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   const propName = id => allProperties.find(p => p.id === id)?.fields?.Name || "—";
 
   // Filter coordinators by role
-  const visibleCoordinators = allCoordinators.filter(c => {
+  const allVisibleCoordinators = allCoordinators.filter(c => {
     if (!genderFilter) return true;
     const propIds = c.fields?.Properties || [];
     return propIds.some(id => activeProperties.find(p => p.id === id));
   });
+  const visibleCoordinators = allVisibleCoordinators.filter(c => c.fields?.Status !== "Inactive");
+  const inactiveCoordinators = allVisibleCoordinators.filter(c => c.fields?.Status === "Inactive");
 
   // Filter residents by role
   const visibleResidents = allResidents.filter(r => {
@@ -848,11 +850,26 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
     catch (e) { setError("Could not send reset email."); }
   };
 
-  const deleteCoordinator = async (id) => {
-    if (!window.confirm("Remove this coordinator? Their visit history will be preserved.")) return;
+  const deactivateCoordinator = async (id) => {
+    if (!window.confirm("Deactivate this coordinator? They will no longer be able to submit forms but can be reinstated at any time. Their visit history is preserved.")) return;
     setSaving(true);
-    try { await atFetch("Coordinators", "DELETE", null, id); flash("Coordinator removed."); await reload(); }
-    catch (e) { setError("Could not remove coordinator."); }
+    try { await atFetch("Coordinators", "PATCH", { records: [{ id, fields: { Status: "Inactive" } }] }); flash("Coordinator deactivated."); await reload(); }
+    catch (e) { setError("Could not deactivate coordinator."); }
+    setSaving(false);
+  };
+
+  const reinstateCoordinator = async (id) => {
+    setSaving(true);
+    try { await atFetch("Coordinators", "PATCH", { records: [{ id, fields: { Status: "Active" } }] }); flash("Coordinator reinstated."); await reload(); }
+    catch (e) { setError("Could not reinstate coordinator."); }
+    setSaving(false);
+  };
+
+  const deleteCoordinator = async (id) => {
+    if (!window.confirm("PERMANENTLY delete this coordinator? This cannot be undone and will prevent re-adding them with the same email. Deactivate is recommended instead.")) return;
+    setSaving(true);
+    try { await atFetch("Coordinators", "DELETE", null, id); flash("Coordinator permanently deleted."); await reload(); }
+    catch (e) { setError("Could not delete coordinator."); }
     setSaving(false);
   };
 
@@ -1054,7 +1071,8 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
                         <Btn small outline color={C.blue} onClick={() => setEditingCoord({ id: c.id, name: c.fields.Name, propertyIds: c.fields.Properties || [], residentIds: c.fields.Residents || [], phone: c.fields.Phone || "" })} disabled={saving}>Edit</Btn>
                         {c.fields.Email && <Btn small outline color={C.blue} onClick={() => resetPassword(c.fields.Email)} disabled={saving}>Reset PW</Btn>}
-                        <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Remove</Btn>
+                        <Btn small outline color={C.muted} onClick={() => deactivateCoordinator(c.id)} disabled={saving}>Deactivate</Btn>
+                        <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Delete</Btn>
                       </div>
                     </div>
                   </div>
@@ -1062,6 +1080,24 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
               </div>
             ))}
           </Card>
+          {inactiveCoordinators.length > 0 && (
+            <Card title={`Deactivated Coordinators (${inactiveCoordinators.length})`} icon="🔒">
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>These coordinators cannot log in or submit forms. Reinstate to restore full access.</div>
+              {inactiveCoordinators.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: C.muted, fontSize: 15 }}>{c.fields.Name} <span style={{ fontSize: 11, color: C.danger, fontWeight: 700 }}>INACTIVE</span></div>
+                    <div style={{ fontSize: 13, color: C.muted }}>{(c.fields.Properties || []).map(id => propName(id)).join(", ") || "No property"}</div>
+                    <div style={{ fontSize: 13, color: C.muted }}>{c.fields.Email || "No email"}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Btn small outline color={C.green} onClick={() => reinstateCoordinator(c.id)} disabled={saving}>Reinstate</Btn>
+                    <Btn small danger onClick={() => deleteCoordinator(c.id)} disabled={saving}>Delete</Btn>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          )}
         </>
       ) : tab === "residents" ? (
         <>
@@ -1245,7 +1281,7 @@ export default function App() {
         const admin = adms.find(a => a.fields?.Email?.toLowerCase() === user.email?.toLowerCase());
         setAdminRecord(admin || null);
         if (!admin) {
-          const coord = coords.find(c => c.fields?.Email?.toLowerCase() === user.email?.toLowerCase());
+          const coord = coords.find(c => c.fields?.Email?.toLowerCase() === user.email?.toLowerCase() && c.fields?.Status !== "Inactive");
           setCoordinatorRecord(coord || null);
         }
       }
@@ -1319,8 +1355,8 @@ export default function App() {
           <div style={{ maxWidth: 540, margin: "40px auto", padding: "0 14px", textAlign: "center" }}>
             <div style={{ background: C.white, borderRadius: 12, padding: 32, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-              <h2 style={{ color: C.blue, margin: "0 0 8px" }}>Account Not Linked</h2>
-              <p style={{ color: C.muted }}>Your login ({user.email}) is not linked to a coordinator record. Please contact your housing director.</p>
+              <h2 style={{ color: C.blue, margin: "0 0 8px" }}>Account Not Active</h2>
+              <p style={{ color: C.muted }}>Your account ({user.email}) is not currently active. Please contact your housing director to restore access.</p>
             </div>
           </div>
         ) : (
