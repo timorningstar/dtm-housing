@@ -866,10 +866,18 @@ function AdminPage({ onBack, adminRole, allCoordinators, allProperties, allResid
   };
 
   const deleteCoordinator = async (id) => {
-    if (!window.confirm("PERMANENTLY delete this coordinator? This cannot be undone and will prevent re-adding them with the same email. Deactivate is recommended instead.")) return;
+    if (!window.confirm("PERMANENTLY delete this coordinator? This cannot be undone. Deactivate is recommended instead.")) return;
     setSaving(true);
-    try { await atFetch("Coordinators", "DELETE", null, id); flash("Coordinator permanently deleted."); await reload(); }
-    catch (e) { setError("Could not delete coordinator."); }
+    try {
+      const visits = await fetchAll("Visit Reports");
+      const hasHistory = visits.some(v => (v.fields?.Coordinator || []).includes(id));
+      if (hasHistory) {
+        setError("Cannot permanently delete this coordinator — they have visit report history. Use Deactivate instead to preserve all records.");
+        setSaving(false); return;
+      }
+      await atFetch("Coordinators", "DELETE", null, id);
+      flash("Coordinator permanently deleted."); await reload();
+    } catch (e) { setError("Could not delete coordinator."); }
     setSaving(false);
   };
 
