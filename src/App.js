@@ -295,10 +295,48 @@ function AddNoteModal({ onClose, coordinatorRecord, adminRole, directorName, all
 
   const propName = id => allProperties.find(p => p.id === id)?.fields?.Name || "";
 
-  const handleFileChange = (e) => {
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1600; // max width or height in px
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        const compressed = new File([blob], file.name, { type: "image/jpeg" });
+        resolve(compressed);
+      }, "image/jpeg", 0.82); // 82% quality
+    };
+    img.src = url;
+  });
+
+  const handleFileChange = async (e) => {
     const f = e.target.files[0];
-    if (f && f.size > 5 * 1024 * 1024) { setError("File must be under 5MB."); return; }
-    setFile(f);
+    if (!f) return;
+    const isImage = f.type.startsWith("image/");
+    if (isImage) {
+      setError("");
+      const compressed = await compressImage(f);
+      if (compressed.size > 5 * 1024 * 1024) {
+        setError("Image is still over 5MB after compression. Please use a smaller image.");
+        return;
+      }
+      setFile(compressed);
+    } else {
+      if (f.size > 5 * 1024 * 1024) {
+        setError("This document is over 5MB. Photos are automatically resized — for documents, please reduce the file size before attaching.");
+        return;
+      }
+      setError("");
+      setFile(f);
+    }
   };
 
   const handleSave = async () => {
@@ -366,10 +404,11 @@ function AddNoteModal({ onClose, coordinatorRecord, adminRole, directorName, all
               style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1.5px solid ${C.border}`, fontSize: 15, color: C.text, background: C.light, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>Attachment (optional — max 5MB)</div>
-            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>Attachment (optional)</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Photos are automatically compressed. Documents must be under 5MB.</div>
+            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.heic"
               style={{ width: "100%", padding: "8px", border: `1.5px solid ${C.border}`, borderRadius: 7, background: C.light, fontSize: 14, boxSizing: "border-box" }} />
-            {file && <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>📎 {file.name}</div>}
+            {file && <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>📎 {file.name} ({(file.size / 1024).toFixed(0)}KB)</div>}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn full onClick={handleSave} disabled={saving} color={C.gold}>{saving ? "Saving…" : "Save Note"}</Btn>
