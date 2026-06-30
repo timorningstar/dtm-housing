@@ -256,24 +256,156 @@ function LoginPage() {
 // ══════════════════════════════════════════════════════════════
 // HISTORY PAGE — formatted like visit form
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// ADD CARE NOTE MODAL
+// ══════════════════════════════════════════════════════════════
+const NOTE_TYPES = ["Follow-up", "Probation Notice", "Class Attendance", "Drug/Breathalyzer", "General"];
+
+function AddNoteModal({ onClose, coordinatorRecord, adminRole, directorName, allResidents, allProperties, onSaved }) {
+  const isAdmin = !!adminRole;
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [residentId, setResidentId] = useState("");
+  const [noteType, setNoteType] = useState("");
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Filter residents by scope
+  const scopedResidents = allResidents.filter(r => {
+    if (r.fields?.Status !== "Active") return false;
+    if (isAdmin) {
+      const propIds = (r.fields?.Property || []);
+      const visiblePropIds = allProperties.filter(p => {
+        if (p.fields?.Status === "Archived") return false;
+        if (adminRole === ROLES.ED) return true;
+        if (adminRole === ROLES.WOMENS) return p.fields?.Gender === GENDERS.WOMENS;
+        if (adminRole === ROLES.MENS) return p.fields?.Gender === GENDERS.MENS;
+        return false;
+      }).map(p => p.id);
+      return propIds.some(id => visiblePropIds.includes(id));
+    }
+    // Coordinator — show assigned residents
+    const assignedIds = coordinatorRecord?.fields?.Residents || [];
+    const propIds = coordinatorRecord?.fields?.Properties || [];
+    if (assignedIds.length > 0) return assignedIds.includes(r.id);
+    return (r.fields?.Property || []).some(id => propIds.includes(id));
+  });
+
+  const propName = id => allProperties.find(p => p.id === id)?.fields?.Name || "";
+
+  const handleFileChange = (e) => {
+    const f = e.target.files[0];
+    if (f && f.size > 5 * 1024 * 1024) { setError("File must be under 5MB."); return; }
+    setFile(f);
+  };
+
+  const handleSave = async () => {
+    if (!residentId || !noteType || !note.trim()) {
+      setError("Resident, Note Type, and Note are all required."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      // Build fields
+      const fields = {
+        "Date": date,
+        "Resident": [residentId],
+        "Note Type": noteType,
+        "Note": note,
+      };
+      if (isAdmin) {
+        fields["Director Name"] = directorName;
+      } else {
+        fields["Coordinator"] = [coordinatorRecord.id];
+      }
+
+      // If file attached, convert to base64 and upload as Airtable attachment
+      if (file) {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        fields["Attachment"] = [{ url: `data:${file.type};base64,${base64}`, filename: file.name }];
+      }
+
+      await atFetch("Care Notes", "POST", { records: [{ fields }] });
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError("Could not save note. Please try again.");
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+        <div style={{ background: C.blue, padding: "16px 20px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ color: C.gold, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>Care Note</div>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 16 }}>📝 Add New Note</div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: C.white, borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ padding: "20px" }}>
+          <ErrorBox msg={error} />
+          <Input label="Date" value={date} onChange={setDate} type="date" required />
+          <SelectField label="Resident" value={residentId} onChange={setResidentId}
+            options={scopedResidents.map(r => ({ value: r.id, label: r.fields.Name + " · " + propName(r.fields?.Property?.[0]) }))}
+            placeholder="Select resident…" required />
+          <SelectField label="Note Type" value={noteType} onChange={setNoteType}
+            options={NOTE_TYPES.map(t => ({ value: t, label: t }))}
+            placeholder="Select type…" required />
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>Note <span style={{ color: C.danger }}>*</span></div>
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Enter your care note here…" rows={5}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1.5px solid ${C.border}`, fontSize: 15, color: C.text, background: C.light, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>Attachment (optional — max 5MB)</div>
+            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+              style={{ width: "100%", padding: "8px", border: `1.5px solid ${C.border}`, borderRadius: 7, background: C.light, fontSize: 14, boxSizing: "border-box" }} />
+            {file && <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>📎 {file.name}</div>}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn full onClick={handleSave} disabled={saving} color={C.gold}>{saving ? "Saving…" : "Save Note"}</Btn>
+            <button onClick={onClose} style={{ flex: 1, padding: "14px 0", borderRadius: 8, border: `2px solid ${C.border}`, background: C.white, color: C.muted, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allProperties, allResidents }) {
   const [reports, setReports] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterProperty, setFilterProperty] = useState("");
   const [filterCoordinator, setFilterCoordinator] = useState("");
   const [expanded, setExpanded] = useState(null);
+  const [showAddNote, setShowAddNote] = useState(false);
   const isAdmin = !!adminRole;
 
-  useEffect(() => { loadReports(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  const loadReports = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const records = await fetchAll("Visit Reports");
-      records.sort((a, b) => new Date(b.fields.Date || 0) - new Date(a.fields.Date || 0));
-      setReports(records);
-    } catch (e) { setError("Could not load visit history."); }
+      const [recs, careNotes] = await Promise.all([
+        fetchAll("Visit Reports"),
+        fetchAll("Care Notes"),
+      ]);
+      recs.sort((a, b) => new Date(b.fields.Date || 0) - new Date(a.fields.Date || 0));
+      careNotes.sort((a, b) => new Date(b.fields.Date || 0) - new Date(a.fields.Date || 0));
+      setReports(recs);
+      setNotes(careNotes);
+    } catch (e) { setError("Could not load history."); }
     setLoading(false);
   };
 
@@ -284,6 +416,7 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
   // Filter properties by role
   const visiblePropertyIds = allProperties
     .filter(p => {
+      if (p.fields?.Status === "Archived") return false;
       if (adminRole === ROLES.ED) return true;
       if (adminRole === ROLES.WOMENS) return p.fields?.Gender === GENDERS.WOMENS;
       if (adminRole === ROLES.MENS) return p.fields?.Gender === GENDERS.MENS;
@@ -291,22 +424,49 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
     })
     .map(p => p.id);
 
+  // Check if a resident is within the current user's scope
+  const residentInScope = (residentIds) => {
+    if (!isAdmin) {
+      const assigned = coordinatorRecord?.fields?.Residents || [];
+      const props = coordinatorRecord?.fields?.Properties || [];
+      return residentIds.some(rid => {
+        if (assigned.length > 0) return assigned.includes(rid);
+        const r = allResidents.find(x => x.id === rid);
+        return (r?.fields?.Property || []).some(id => props.includes(id));
+      });
+    }
+    return residentIds.some(rid => {
+      const r = allResidents.find(x => x.id === rid);
+      return (r?.fields?.Property || []).some(id => visiblePropertyIds.includes(id));
+    });
+  };
+
+  const getResidentPropIds = (residentIds) =>
+    residentIds.flatMap(rid => allResidents.find(res => res.id === rid)?.fields?.Property || []);
+
   const filtered = reports.filter(r => {
-    const coordIds = r.fields.Coordinator || [];
-    if (!isAdmin) return coordinatorRecord && coordIds.includes(coordinatorRecord.id);
-    // Always use the resident's actual property for filtering
     const residentIds = r.fields.Resident || [];
-    const residentPropIds = residentIds.flatMap(rid => allResidents.find(res => res.id === rid)?.fields?.Property || []);
-    // Fall back to coordinator's properties if resident property not found
-    const coord = allCoordinators.find(c => coordIds.includes(c.id));
-    const coordPropIds = coord?.fields?.Properties || [];
-    const effectivePropIds = residentPropIds.length > 0 ? residentPropIds : coordPropIds;
-    const inScope = effectivePropIds.some(id => visiblePropertyIds.includes(id));
-    if (!inScope) return false;
-    if (filterProperty && !effectivePropIds.includes(filterProperty)) return false;
+    if (!residentInScope(residentIds)) return false;
+    if (filterProperty && !getResidentPropIds(residentIds).includes(filterProperty)) return false;
+    const coordIds = r.fields.Coordinator || [];
     if (filterCoordinator && !coordIds.includes(filterCoordinator)) return false;
     return true;
   });
+
+  const filteredNotes = notes.filter(n => {
+    const residentIds = n.fields.Resident || [];
+    if (!residentInScope(residentIds)) return false;
+    if (filterProperty && !getResidentPropIds(residentIds).includes(filterProperty)) return false;
+    const coordIds = n.fields.Coordinator || [];
+    if (filterCoordinator && coordIds.length > 0 && !coordIds.includes(filterCoordinator)) return false;
+    return true;
+  });
+
+  // Interleave visits and notes sorted by date descending
+  const allItems = [
+    ...filtered.map(r => ({ type: "visit", date: r.fields.Date || "", data: r })),
+    ...filteredNotes.map(n => ({ type: "note", date: n.fields.Date || "", data: n })),
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const visibleCoordinators = allCoordinators.filter(c => {
     const propIds = c.fields?.Properties || [];
@@ -317,26 +477,80 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "18px 14px 40px" }}>
-      <ErrorBox msg={error} />
-      {isAdmin && (
-        <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <SelectField label="Filter by Property" value={filterProperty} onChange={setFilterProperty}
-              options={visibleProperties.map(p => ({ value: p.id, label: p.fields.Name }))}
-              placeholder="All properties" />
-          </div>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <SelectField label="Filter by Coordinator" value={filterCoordinator} onChange={setFilterCoordinator}
-              options={visibleCoordinators.map(c => ({ value: c.id, label: c.fields.Name }))}
-              placeholder="All coordinators" />
-          </div>
-        </div>
+      {showAddNote && (
+        <AddNoteModal
+          onClose={() => setShowAddNote(false)}
+          coordinatorRecord={coordinatorRecord}
+          adminRole={adminRole}
+          directorName={adminRole === ROLES.WOMENS ? "Women's Director" : adminRole === ROLES.MENS ? "Men's Director" : adminRole === ROLES.ED ? "Executive Director" : ""}
+          allResidents={allResidents}
+          allProperties={allProperties}
+          onSaved={loadAll}
+        />
       )}
+      <ErrorBox msg={error} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 10, flex: 1, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <SelectField label="Filter by Property" value={filterProperty} onChange={setFilterProperty}
+                options={visibleProperties.map(p => ({ value: p.id, label: p.fields.Name }))}
+                placeholder="All properties" />
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <SelectField label="Filter by Coordinator" value={filterCoordinator} onChange={setFilterCoordinator}
+                options={visibleCoordinators.map(c => ({ value: c.id, label: c.fields.Name }))}
+                placeholder="All coordinators" />
+            </div>
+          </div>
+        )}
+        <button onClick={() => setShowAddNote(true)} style={{ background: C.gold, color: C.white, border: "none", borderRadius: 8, padding: "10px 18px", fontWeight: 700, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", alignSelf: "flex-end" }}>
+          📝 + Add Note
+        </button>
+      </div>
       {loading ? (
         <div style={{ textAlign: "center", color: C.muted, padding: 40 }}>Loading history…</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", color: C.muted, padding: 40, background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>No visit reports found.</div>
-      ) : filtered.map(r => {
+      ) : allItems.length === 0 ? (
+        <div style={{ textAlign: "center", color: C.muted, padding: 40, background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>No records found.</div>
+      ) : allItems.map(item => {
+        if (item.type === "note") {
+          const n = item.data;
+          const nResidentIds = n.fields.Resident || [];
+          const nRName = nResidentIds.length ? residentName(nResidentIds[0]) : "—";
+          const nResident = allResidents.find(r => nResidentIds.includes(r.id));
+          const nPropId = nResident?.fields?.Property?.[0];
+          const nPName = nPropId ? propName(nPropId) : "—";
+          const nCoordIds = n.fields.Coordinator || [];
+          const nAuthor = nCoordIds.length ? coordName(nCoordIds[0]) : (n.fields["Director Name"] || "—");
+          const attachments = n.fields.Attachment || [];
+          return (
+            <div key={n.id} style={{ background: C.white, borderRadius: 12, border: `2px solid ${C.gold}`, marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(200,149,42,0.15)" }}>
+              <div style={{ background: "#fff8ec", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#7a5a10", fontSize: 15 }}>
+                    📝 {n.fields.Date || "No date"} · {nRName}
+                    <span style={{ marginLeft: 10, fontSize: 11, background: C.gold, color: C.white, padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>{n.fields["Note Type"] || "Note"}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#9a7a30" }}>{nPName} · {nAuthor}</div>
+                </div>
+              </div>
+              <div style={{ padding: "14px 18px" }}>
+                <div style={{ fontSize: 15, color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{n.fields.Note}</div>
+                {attachments.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    {attachments.map((att, i) => (
+                      <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.light, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 12px", fontSize: 13, color: C.blue, textDecoration: "none", fontWeight: 600 }}>
+                        📎 {att.filename}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+        const r = item.data;
         const isOpen = expanded === r.id;
         const coordIds = r.fields.Coordinator || [];
         const cName = coordIds.length ? coordName(coordIds[0]) : (r.fields["Director Name"] || "—");
