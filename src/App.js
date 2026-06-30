@@ -1593,38 +1593,13 @@ export default function App() {
       </div>
 
       {tab === "form" && (
-        adminRole === ROLES.WOMENS || adminRole === ROLES.MENS ? (
+        adminRole === ROLES.WOMENS || adminRole === ROLES.MENS || adminRole === ROLES.ED ? (
           <DirectorVisitForm
             adminRole={adminRole}
             allProperties={properties}
             allResidents={residents}
             directorName={userName}
           />
-        ) : isAdmin ? (
-          <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
-            <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18, fontSize: 14, color: "#7a5a10" }}>
-              📋 This is a <strong>reference view</strong> of the care coordinator form. Coordinators fill this out weekly after logging in with their own account.
-            </div>
-            {[
-              ["📋", "Visit Information", "Date · Coordinator name · Property · Resident dropdown"],
-              ["✝️", "Spiritual Growth", "Church attendance, Bible reading plan, prayer requests, other spiritual needs"],
-              ["🤝", "Weekly Participation", "Work schedule, therapy, classes (Jobs for Life / Faith & Finances / Mastering Debt), recovery meeting"],
-              ["🏠", "House Maintenance", "Cleanliness (Kitchen / Bathrooms / Floors), laundry, trash, repairs, meal prep concerns"],
-              ["📄", "Agreement Compliance", "Alcohol/drugs/nicotine, visitors policy, program fee ($300 by 1st), non-compliance issues"],
-              ["💰", "Financial Goals", "Employer, pay rate, checking/savings balances, income goals, setbacks"],
-              ["👶", "Single Parenting Concerns", "Only shown if resident has children — school attendance, behavioral support, childcare"],
-              ["🚗", "Transportation / DriveWise", "Oil change, car insurance, vehicle concerns"],
-              ["💬", "Other Concerns", "Any other concerns"],
-              ["🧪", "Monthly Tests (not required)", "Drug test and breathalyzer results"],
-            ].map(([icon, title, desc]) => (
-              <div key={title} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12, overflow: "hidden" }}>
-                <div style={{ background: C.blue, padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>{icon}</span><span style={{ color: C.white, fontWeight: 700, fontSize: 14 }}>{title}</span>
-                </div>
-                <div style={{ padding: "12px 16px", fontSize: 14, color: C.muted }}>{desc}</div>
-              </div>
-            ))}
-          </div>
         ) : !coordinatorRecord ? (
           <div style={{ maxWidth: 540, margin: "40px auto", padding: "0 14px", textAlign: "center" }}>
             <div style={{ background: C.white, borderRadius: 12, padding: 32, border: `1px solid ${C.border}` }}>
