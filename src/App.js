@@ -294,12 +294,13 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
   const filtered = reports.filter(r => {
     const coordIds = r.fields.Coordinator || [];
     if (!isAdmin) return coordinatorRecord && coordIds.includes(coordinatorRecord.id);
-    const coord = allCoordinators.find(c => coordIds.includes(c.id));
-    const propIds = coord?.fields?.Properties || [];
-    // For director visits (no coordinator), check resident's property
+    // Always use the resident's actual property for filtering
     const residentIds = r.fields.Resident || [];
     const residentPropIds = residentIds.flatMap(rid => allResidents.find(res => res.id === rid)?.fields?.Property || []);
-    const effectivePropIds = propIds.length > 0 ? propIds : residentPropIds;
+    // Fall back to coordinator's properties if resident property not found
+    const coord = allCoordinators.find(c => coordIds.includes(c.id));
+    const coordPropIds = coord?.fields?.Properties || [];
+    const effectivePropIds = residentPropIds.length > 0 ? residentPropIds : coordPropIds;
     const inScope = effectivePropIds.some(id => visiblePropertyIds.includes(id));
     if (!inScope) return false;
     if (filterProperty && !effectivePropIds.includes(filterProperty)) return false;
@@ -339,11 +340,11 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
         const isOpen = expanded === r.id;
         const coordIds = r.fields.Coordinator || [];
         const cName = coordIds.length ? coordName(coordIds[0]) : (r.fields["Director Name"] || "—");
-        const coord = allCoordinators.find(c => coordIds.includes(c.id));
-        const propIds = coord?.fields?.Properties || [];
-        const pName = propIds.length ? propName(propIds[0]) : "—";
         const residentIds = r.fields.Resident || [];
         const rName = residentIds.length ? residentName(residentIds[0]) : "—";
+        const resident = allResidents.find(res => residentIds.includes(res.id));
+        const residentPropId = resident?.fields?.Property?.[0];
+        const pName = residentPropId ? propName(residentPropId) : "—";
         const f = r.fields;
         const hasChildren = f["School Attendance"] !== undefined || f["Behavioral Support Needs"] !== undefined || f["Childcare Concerns"] !== undefined;
 
