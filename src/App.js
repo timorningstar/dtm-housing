@@ -296,9 +296,13 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
     if (!isAdmin) return coordinatorRecord && coordIds.includes(coordinatorRecord.id);
     const coord = allCoordinators.find(c => coordIds.includes(c.id));
     const propIds = coord?.fields?.Properties || [];
-    const inScope = propIds.some(id => visiblePropertyIds.includes(id));
+    // For director visits (no coordinator), check resident's property
+    const residentIds = r.fields.Resident || [];
+    const residentPropIds = residentIds.flatMap(rid => allResidents.find(res => res.id === rid)?.fields?.Property || []);
+    const effectivePropIds = propIds.length > 0 ? propIds : residentPropIds;
+    const inScope = effectivePropIds.some(id => visiblePropertyIds.includes(id));
     if (!inScope) return false;
-    if (filterProperty && !propIds.includes(filterProperty)) return false;
+    if (filterProperty && !effectivePropIds.includes(filterProperty)) return false;
     if (filterCoordinator && !coordIds.includes(filterCoordinator)) return false;
     return true;
   });
@@ -334,7 +338,7 @@ function HistoryPage({ coordinatorRecord, adminRole, allCoordinators, allPropert
       ) : filtered.map(r => {
         const isOpen = expanded === r.id;
         const coordIds = r.fields.Coordinator || [];
-        const cName = coordIds.length ? coordName(coordIds[0]) : "—";
+        const cName = coordIds.length ? coordName(coordIds[0]) : (r.fields["Director Name"] || "—");
         const coord = allCoordinators.find(c => coordIds.includes(c.id));
         const propIds = coord?.fields?.Properties || [];
         const pName = propIds.length ? propName(propIds[0]) : "—";
@@ -545,6 +549,244 @@ const emptyForm = {
   otherConcerns: null, otherConcernsNotes: "",
   drugTestResults: "", breathalyzerResults: "",
 };
+
+// ══════════════════════════════════════════════════════════════
+// DIRECTOR VISIT FORM
+// ══════════════════════════════════════════════════════════════
+function DirectorVisitForm({ adminRole, adminRecord, allProperties, allResidents, directorName }) {
+  const [form, setForm] = useState({ ...emptyForm });
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  // Filter properties by director role
+  const scopedProperties = allProperties.filter(p => {
+    if (p.fields?.Status === "Archived") return false;
+    if (adminRole === ROLES.ED) return true;
+    if (adminRole === ROLES.WOMENS) return p.fields?.Gender === GENDERS.WOMENS;
+    if (adminRole === ROLES.MENS) return p.fields?.Gender === GENDERS.MENS;
+    return false;
+  });
+
+  // Filter residents by selected property
+  const scopedResidents = allResidents.filter(r =>
+    r.fields?.Status === "Active" &&
+    selectedPropertyId &&
+    (r.fields?.Property || []).includes(selectedPropertyId)
+  );
+
+  const selectedResident = allResidents.find(r => r.id === form.residentId);
+  const hasChildren = selectedResident?.fields?.["Has Children"] || false;
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const requiredFields = [
+    "churchAttendance", "bibleReadingPlan", "prayerRequests", "spiritualGrowthOther",
+    "workSchedule", "attendingTherapy", "attendingClasses", "attendingRecoveryMeeting",
+    "kitchenClean", "bathroomsClean", "floorsClean", "laundry", "trashRemoved", "repairsNeeded", "mealPrepConcerns",
+    "alcoholDrugsNicotine", "visitorsPolicy", "programFeePaid", "nonCompliance",
+    "incomeGoalsReviewed", "financialSetbacks",
+    "oilChangeNeeded", "carInsuranceCurrent", "vehicleConcerns",
+    "otherConcerns",
+  ];
+
+  const handleSubmit = async () => {
+    if (!form.date || !selectedPropertyId || !form.residentId) {
+      setError("Please fill in Date, Property, and Resident before submitting."); return;
+    }
+    const missing = requiredFields.filter(f => form[f] === null);
+    if (hasChildren) {
+      ["schoolAttendance", "behavioralSupport", "childcareConcerns"].forEach(f => { if (form[f] === null) missing.push(f); });
+    }
+    if (missing.length > 0) { setError("Please answer all Yes/No questions before submitting."); return; }
+    setError(""); setSubmitting(true);
+    try {
+      const fields = {
+        "Date": form.date,
+        "Resident": [form.residentId],
+        "Director Name": directorName,
+        "Church Attendance": form.churchAttendance, "Church Name": form.churchName,
+        "Bible Reading Plan": form.bibleReadingPlan, "Prayer Requests": form.prayerRequests,
+        "Prayer Request Notes": form.prayerRequestNotes, "Spiritual Growth Notes": form.spiritualGrowthNotes,
+        "Work Schedule": form.workSchedule, "Work Concerns Notes": form.workConcernsNotes,
+        "Therapy Sessions": form.attendingTherapy, "Attending Classes": form.attendingClasses,
+        "Current Class and Mentor": form.currentClassMentor, "Attending Recovery Meeting": form.attendingRecoveryMeeting,
+        "Kitchen Clean": form.kitchenClean, "Bathrooms Clean": form.bathroomsClean, "Floors Clean": form.floorsClean,
+        "Laundry": form.laundry, "Trash Removed": form.trashRemoved, "Repairs Needed": form.repairsNeeded,
+        "Repair Notes": form.repairNotes, "Meal Prep Concerns": form.mealPrepConcerns, "Meal Prep Notes": form.mealPrepNotes,
+        "Alcohol Drugs Nicotine": form.alcoholDrugsNicotine, "Visitors Policy Discussed": form.visitorsPolicy,
+        "Program Fee Paid": form.programFeePaid, "Non Compliance Notes": form.nonComplianceNotes,
+        "Employer Name": form.employerName, "Pay Rate": form.payRate,
+        "Checking Balance": form.checkingBalance, "Savings Balance": form.savingsBalance,
+        "Income Goals Reviewed": form.incomeGoalsReviewed, "Financial Setbacks": form.financialSetbacks,
+        "Financial Setback Notes": form.financialSetbackNotes,
+        "Oil Change Needed": form.oilChangeNeeded, "Car Insurance Current": form.carInsuranceCurrent,
+        "Vehicle Concerns": form.vehicleConcerns, "Vehicle Notes": form.vehicleNotes,
+        "Other Concerns": form.otherConcerns, "Other Concerns Notes": form.otherConcernsNotes,
+        "Drug Test Results": form.drugTestResults, "Breathalyzer Results": form.breathalyzerResults,
+      };
+      if (hasChildren) {
+        fields["School Attendance"] = form.schoolAttendance;
+        fields["Behavioral Support Needs"] = form.behavioralSupport;
+        fields["Childcare Concerns"] = form.childcareConcerns;
+        fields["Childcare Notes"] = form.childcareNotes;
+      }
+      await atFetch("Visit Reports", "POST", { records: [{ fields }] });
+      setSubmitted(true);
+    } catch (e) { setError("Submission failed. Please check your connection and try again."); }
+    setSubmitting(false);
+  };
+
+  if (submitted) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
+      <div style={{ background: C.white, borderRadius: 16, padding: 36, maxWidth: 400, width: "100%", textAlign: "center", boxShadow: "0 4px 24px rgba(26,58,92,0.12)" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.green, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <svg width="30" height="24" viewBox="0 0 30 24" fill="none"><path d="M2 12L11 21L28 2" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </div>
+        <h2 style={{ color: C.blue, margin: "0 0 10px", fontSize: 22 }}>Visit Recorded</h2>
+        <p style={{ color: C.muted, fontSize: 15, margin: "0 0 28px" }}>
+          Director visit for <strong>{selectedResident?.fields?.Name}</strong> on <strong>{form.date}</strong> has been saved.
+        </p>
+        <Btn full onClick={() => { setForm({ ...emptyForm }); setSelectedPropertyId(""); setSubmitted(false); }}>Submit Another Visit</Btn>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
+      <div style={{ background: "#e8f0f8", border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 13, color: C.blue, fontWeight: 600 }}>
+        👑 Director Visit — submitted as <strong>{directorName}</strong>
+      </div>
+      <ErrorBox msg={error} />
+
+      <Card title="Visit Information" icon="📋">
+        <Input label="Date of Visit" value={form.date} onChange={v => set("date", v)} type="date" required />
+        <SelectField label="Property" value={selectedPropertyId}
+          onChange={v => { setSelectedPropertyId(v); set("residentId", ""); }}
+          options={scopedProperties.map(p => ({ value: p.id, label: p.fields.Name }))}
+          placeholder="Select property…" required />
+        {selectedPropertyId && (
+          <SelectField label="Resident" value={form.residentId} onChange={v => set("residentId", v)}
+            options={scopedResidents.map(r => ({ value: r.id, label: r.fields.Name }))}
+            placeholder={scopedResidents.length ? "Select resident…" : "No active residents at this property"} required />
+        )}
+      </Card>
+
+      <Card title="Spiritual Growth" icon="✝️">
+        <YesNo label="Church Attendance?" value={form.churchAttendance} onChange={v => set("churchAttendance", v)} required>
+          <Input label="Where?" value={form.churchName} onChange={v => set("churchName", v)} placeholder="Church name" />
+        </YesNo>
+        <YesNo label="Has a Bible reading plan?" value={form.bibleReadingPlan} onChange={v => set("bibleReadingPlan", v)} required />
+        <YesNo label="Prayer requests?" value={form.prayerRequests} onChange={v => set("prayerRequests", v)} required>
+          <Textarea label="Prayer request details" value={form.prayerRequestNotes} onChange={v => set("prayerRequestNotes", v)} placeholder="List prayer requests…" />
+        </YesNo>
+        <YesNo label="Other needs to encourage spiritual growth?" value={form.spiritualGrowthOther} onChange={v => set("spiritualGrowthOther", v)} required>
+          <Textarea label="Notes" value={form.spiritualGrowthNotes} onChange={v => set("spiritualGrowthNotes", v)} placeholder="Describe other spiritual needs…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Weekly Participation" icon="🤝">
+        <YesNo label="Work schedule, attendance or concerns?" value={form.workSchedule} onChange={v => set("workSchedule", v)} required>
+          <Textarea label="Notes" value={form.workConcernsNotes} onChange={v => set("workConcernsNotes", v)} placeholder="Describe work concerns…" />
+        </YesNo>
+        <YesNo label="Attending therapy?" value={form.attendingTherapy} onChange={v => set("attendingTherapy", v)} required />
+        <YesNo label="Attending classes? (Jobs for Life, Faith and Finances, Mastering Debt)" value={form.attendingClasses} onChange={v => set("attendingClasses", v)} required>
+          <Input label="Current class and mentor" value={form.currentClassMentor} onChange={v => set("currentClassMentor", v)} placeholder="Class name and mentor" />
+        </YesNo>
+        <YesNo label="Attending recovery meeting?" value={form.attendingRecoveryMeeting} onChange={v => set("attendingRecoveryMeeting", v)} required />
+      </Card>
+
+      <Card title="House Maintenance" icon="🏠">
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontWeight: 600 }}>Cleanliness Checks <span style={{ color: C.danger }}>*</span></div>
+          <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "12px", background: C.light }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              {[["kitchenClean", "Kitchen"], ["bathroomsClean", "Bathrooms"], ["floorsClean", "Floors"]].map(([k, l]) => (
+                <div key={k}>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600, textAlign: "center" }}>{l}</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => set(k, true)} style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: `2px solid ${form[k] === true ? C.green : C.border}`, background: form[k] === true ? C.green : C.white, color: form[k] === true ? C.white : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Y</button>
+                    <button onClick={() => set(k, false)} style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: `2px solid ${form[k] === false ? C.danger : C.border}`, background: form[k] === false ? C.danger : C.white, color: form[k] === false ? C.white : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>N</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <YesNo label="Laundry?" value={form.laundry} onChange={v => set("laundry", v)} required />
+        <YesNo label="Trash removed and to curb?" value={form.trashRemoved} onChange={v => set("trashRemoved", v)} required />
+        <YesNo label="Repair or house concerns?" value={form.repairsNeeded} onChange={v => set("repairsNeeded", v)} required>
+          <Textarea label="Repair notes" value={form.repairNotes} onChange={v => set("repairNotes", v)} placeholder="Describe repairs needed…" />
+        </YesNo>
+        <YesNo label="Meal prep / fast food concerns?" value={form.mealPrepConcerns} onChange={v => set("mealPrepConcerns", v)} required>
+          <Textarea label="Notes" value={form.mealPrepNotes} onChange={v => set("mealPrepNotes", v)} placeholder="Describe meal prep concerns…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Agreement Compliance" icon="📄">
+        <YesNo label="Alcohol, drug and nicotine compliance?" value={form.alcoholDrugsNicotine} onChange={v => set("alcoholDrugsNicotine", v)} required />
+        <YesNo label="Discussed visitors policy?" value={form.visitorsPolicy} onChange={v => set("visitorsPolicy", v)} required />
+        <YesNo label="Program fee of $300 paid by 1st of month?" value={form.programFeePaid} onChange={v => set("programFeePaid", v)} required />
+        <YesNo label="Any non-compliance issues?" value={form.nonCompliance} onChange={v => set("nonCompliance", v)} required>
+          <Textarea label="Non-compliance notes" value={form.nonComplianceNotes} onChange={v => set("nonComplianceNotes", v)} placeholder="Describe non-compliance…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Financial Goals" icon="💰">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <Input label="Employer Name" value={form.employerName} onChange={v => set("employerName", v)} placeholder="Employer" />
+          <Input label="Pay Rate" value={form.payRate} onChange={v => set("payRate", v)} placeholder="$/hr or salary" />
+          <Input label="Checking Account Balance" value={form.checkingBalance} onChange={v => set("checkingBalance", v)} placeholder="$0.00" />
+          <Input label="Savings Account Balance" value={form.savingsBalance} onChange={v => set("savingsBalance", v)} placeholder="$0.00" />
+        </div>
+        <YesNo label="Reviewed income goals (3, 6, 9, 12 months)?" value={form.incomeGoalsReviewed} onChange={v => set("incomeGoalsReviewed", v)} required />
+        <YesNo label="Any setbacks?" value={form.financialSetbacks} onChange={v => set("financialSetbacks", v)} required>
+          <Textarea label="Setback notes" value={form.financialSetbackNotes} onChange={v => set("financialSetbackNotes", v)} placeholder="Describe setbacks…" />
+        </YesNo>
+      </Card>
+
+      {hasChildren && (
+        <Card title="Single Parenting Concerns" icon="👶">
+          <YesNo label="School attendance concerns?" value={form.schoolAttendance} onChange={v => set("schoolAttendance", v)} required />
+          <YesNo label="Behavioral support needs?" value={form.behavioralSupport} onChange={v => set("behavioralSupport", v)} required />
+          <YesNo label="Childcare concerns?" value={form.childcareConcerns} onChange={v => set("childcareConcerns", v)} required>
+            <Textarea label="Childcare notes" value={form.childcareNotes} onChange={v => set("childcareNotes", v)} placeholder="Describe childcare concerns…" />
+          </YesNo>
+        </Card>
+      )}
+
+      <Card title="Transportation / DriveWise" icon="🚗">
+        <YesNo label="Oil change needed?" value={form.oilChangeNeeded} onChange={v => set("oilChangeNeeded", v)} required />
+        <YesNo label="Car insurance up to date and paid?" value={form.carInsuranceCurrent} onChange={v => set("carInsuranceCurrent", v)} required />
+        <YesNo label="Other vehicle concerns?" value={form.vehicleConcerns} onChange={v => set("vehicleConcerns", v)} required>
+          <Textarea label="Vehicle notes" value={form.vehicleNotes} onChange={v => set("vehicleNotes", v)} placeholder="Describe vehicle concerns…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Any Other Concerns?" icon="💬">
+        <YesNo label="Any other concerns?" value={form.otherConcerns} onChange={v => set("otherConcerns", v)} required>
+          <Textarea label="Notes" value={form.otherConcernsNotes} onChange={v => set("otherConcernsNotes", v)} placeholder="Describe any other concerns…" />
+        </YesNo>
+      </Card>
+
+      <Card title="Monthly Tests (if applicable)" icon="🧪">
+        <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 7, padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#7a5a10" }}>
+          Complete only during months when testing occurs. Not required.
+        </div>
+        <Input label="Drug Test Results" value={form.drugTestResults} onChange={v => set("drugTestResults", v)} placeholder="Results" />
+        <Input label="Breathalyzer Test Results" value={form.breathalyzerResults} onChange={v => set("breathalyzerResults", v)} placeholder="Results" />
+      </Card>
+
+      <Btn full onClick={handleSubmit} disabled={submitting} color={C.gold}>
+        {submitting ? "Submitting…" : "Submit Director Visit Report"}
+      </Btn>
+      <p style={{ textAlign: "center", color: "#8a9bac", fontSize: 13, marginTop: 12 }}>
+        This report will be saved to the DTM Housing system.
+      </p>
+    </div>
+  );
+}
 
 function CareForm({ coordinatorRecord, properties }) {
   const [form, setForm] = useState(emptyForm);
@@ -1350,7 +1592,14 @@ export default function App() {
       </div>
 
       {tab === "form" && (
-        isAdmin ? (
+        adminRole === ROLES.WOMENS || adminRole === ROLES.MENS ? (
+          <DirectorVisitForm
+            adminRole={adminRole}
+            allProperties={properties}
+            allResidents={residents}
+            directorName={userName}
+          />
+        ) : isAdmin ? (
           <div style={{ maxWidth: 540, margin: "0 auto", padding: "18px 14px 36px" }}>
             <div style={{ background: "#fff8ec", border: `1px solid ${C.gold}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18, fontSize: 14, color: "#7a5a10" }}>
               📋 This is a <strong>reference view</strong> of the care coordinator form. Coordinators fill this out weekly after logging in with their own account.
